@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.32, for debian-linux-gnu (i686)
+-- MySQL dump 10.14  Distrib 5.5.33a-MariaDB, for Linux (x86_64)
 --
 -- Host: localhost    Database: cloudronedb
 -- ------------------------------------------------------
--- Server version	5.5.32-0ubuntu0.12.04.1
+-- Server version	5.5.33a-MariaDB-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,6 +14,33 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `drone_ownership`
+--
+
+DROP TABLE IF EXISTS `drone_ownership`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `drone_ownership` (
+  `user` varchar(50) NOT NULL,
+  `drone` int(11) NOT NULL,
+  KEY `user` (`user`),
+  KEY `drone` (`drone`),
+  CONSTRAINT `drone_ownership_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `drone_ownership_ibfk_2` FOREIGN KEY (`drone`) REFERENCES `drones` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `drone_ownership`
+--
+
+LOCK TABLES `drone_ownership` WRITE;
+/*!40000 ALTER TABLE `drone_ownership` DISABLE KEYS */;
+INSERT INTO `drone_ownership` VALUES ('test',0),('test',1);
+/*!40000 ALTER TABLE `drone_ownership` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `drones`
@@ -29,6 +56,7 @@ CREATE TABLE `drones` (
   `location` varchar(200) NOT NULL,
   `state` int(11) NOT NULL,
   `driver` varchar(200) NOT NULL,
+  `map` varchar(200) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `state` (`state`),
   CONSTRAINT `drones_ibfk_1` FOREIGN KEY (`state`) REFERENCES `states` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
@@ -41,35 +69,8 @@ CREATE TABLE `drones` (
 
 LOCK TABLES `drones` WRITE;
 /*!40000 ALTER TABLE `drones` DISABLE KEYS */;
-INSERT INTO `drones` VALUES (0,'TestDroneDist','ardrone2','RSATU',1,'/home/ardrone/asd_2013-10-14-06-51-29.bag'),(1,'TestDroneObj','ardrone2','ISA',1,'/home/ardrone/flights/flight_2013-10-13-17-30-39.bag');
+INSERT INTO `drones` VALUES (0,'TestDroneDist','ardrone2','RSATU',2,'/home/walkindude/catkin_ws/record/flight_2013-10-19-14-40-12.bag',''),(1,'TestDroneObj','ardrone2','ISA',0,'/home/walkindude/catkin_ws/record/flight1_2013-10-19-14-40-12.bag','');
 /*!40000 ALTER TABLE `drones` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `pool`
---
-
-DROP TABLE IF EXISTS `pool`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `pool` (
-  `user` varchar(50) NOT NULL,
-  `drone` int(11) NOT NULL,
-  KEY `user` (`user`),
-  KEY `drone` (`drone`),
-  CONSTRAINT `pool_ibfk_1` FOREIGN KEY (`user`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `pool_ibfk_2` FOREIGN KEY (`drone`) REFERENCES `drones` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `pool`
---
-
-LOCK TABLES `pool` WRITE;
-/*!40000 ALTER TABLE `pool` DISABLE KEYS */;
-INSERT INTO `pool` VALUES ('test',0),('test',1);
-/*!40000 ALTER TABLE `pool` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -86,6 +87,7 @@ SET character_set_client = utf8;
   `model` tinyint NOT NULL,
   `location` tinyint NOT NULL,
   `driver` tinyint NOT NULL,
+  `map` tinyint NOT NULL,
   `state` tinyint NOT NULL,
   `user` tinyint NOT NULL
 ) ENGINE=MyISAM */;
@@ -111,7 +113,7 @@ CREATE TABLE `states` (
 
 LOCK TABLES `states` WRITE;
 /*!40000 ALTER TABLE `states` DISABLE KEYS */;
-INSERT INTO `states` VALUES (0,'Free'),(1,'On work');
+INSERT INTO `states` VALUES (0,'Free'),(1,'Selected'),(2,'OnTask');
 /*!40000 ALTER TABLE `states` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -169,7 +171,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `show_all` AS select `d`.`id` AS `id`,`d`.`name` AS `name`,`d`.`model` AS `model`,`d`.`location` AS `location`,`d`.`driver` AS `driver`,`s`.`name` AS `state`,`p`.`user` AS `user` from (`states` `s` join (`drones` `d` left join `pool` `p` on((`d`.`id` = `p`.`drone`)))) where (`d`.`state` = `s`.`id`) */;
+/*!50001 VIEW `show_all` AS select `d`.`id` AS `id`,`d`.`name` AS `name`,`d`.`model` AS `model`,`d`.`location` AS `location`,`d`.`driver` AS `driver`,`d`.`map` AS `map`,`d`.`state` AS `state`,`do`.`user` AS `user` from (`drones` `d` left join `drone_ownership` `do` on((`d`.`id` = `do`.`drone`))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -202,4 +204,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-10-15 15:07:55
+-- Dump completed on 2013-10-21  6:26:58
