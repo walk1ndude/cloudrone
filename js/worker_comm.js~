@@ -1,0 +1,245 @@
+var WORKER_COMM = {
+  
+  roshostname : 'localhost',
+  mjpeghostname : 'localhost',
+  rosport : 9090,
+    
+  initRos: function(url) {   
+    this.ros = new ROSLIB.Ros({
+      url : 'ws://' + (url.roshostname || this.roshostname) + ':' + (url.rosport || this.rosport)
+    });
+    this.mjpeghostname = url.roshostname || this.mjpeghostname;
+  },
+  
+  initService : function(initParams) {
+    var client = new ROSLIB.Service(initParams.serviceObject);
+    
+    client.callService(new ROSLIB.ServiceRequest(initParams.requestObject),
+      function(response) {
+	if (response.success) {
+	  WORKER_COMM.serviceResponse(response, initParams.responseSuccess);
+	}
+	else {
+	  WORKER_COMM.serviceResponse(response, initParams.responseFailure);
+	}
+      });
+  },
+  
+  serviceResponse : function(response, template) {    
+    if (template.id === 'drone_show_success') {
+      CLOUDRONE.unselectDrone();
+      CLOUDRONE.showDrones(response);
+    }
+    
+    if (template.id === 'drone_pick_success') {
+      this.initFlightCommands();
+      $('#flightTaskInput').removeAttr('disabled');
+    }
+    
+    var pages = template.pages;
+    
+    for (var id = 0; id < ((pages) ? pages.length : 0) ; id ++) {
+      PAGE.showPage(pages[id]);
+    }
+  
+    var maps = template.maps;
+	
+    for (var id = 0; id < ((maps) ? maps.length : 0) ; id ++) {
+      CLOUDRONE.maps[maps[id]].invalidateSize(false);
+    }
+    
+    var domElements = template.domElements;
+    
+    for (var id = 0; id < ((domElements) ? domElements.length : 0) ; id ++) {
+      
+      var domElem = domElements[id].element;
+      var method = domElements[id].method;
+      var params = domElements[id].params;
+      
+      $(domElem)[method](params);
+    }
+    
+    localStorage.id = (template.id == 'sign_success') ? response.id : localStorage.id;
+    
+    for (var id = 0; id < ((template.alerts) ? template.alerts.length : 0) ; id ++) {
+      alert(template.alerts[id]);
+    }
+  },
+
+  doSign : function(input, template) {
+    this.initService({
+      serviceObject : {
+	ros : this.ros,
+	name : '/cloudrone/sign',
+	serviceType: 'cloudrone/Auth'
+      },
+      requestObject : {
+	id : input.id,
+	password : input.password || ''
+      },
+      responseSuccess : template.success,
+      responseFailure : template.failure
+    });
+    
+    return false;
+  },
+  
+  doRegister : function(input, template) {
+    this.initService({
+      serviceObject : {
+	ros : this.ros,
+	name : '/cloudrone/reg',
+	serviceType : 'cloudrone/Auth'
+      },
+      requestObject : {
+	id : input.id,
+	password : input.password
+      },
+      responseSuccess : template.success,
+      responseFailure : template.failure
+    });
+    
+    return false;
+  },
+  
+  doShowDrones : function(input, template) {
+    this.initService({
+      serviceObject : {
+	ros : this.ros,
+	name : '/cloudrone/get_drones',
+	serviceType : 'cloudrone/GetDrones'
+      },
+      requestObject : {
+	show : input.show,
+	user : input.user || localStorage.id
+      },
+      responseSuccess : template.success,
+      responseFailure : template.failure
+    });
+  },
+  
+  doPickDrone : function(input, template) {
+    CLOUDRONE.pickedDrone = input.id;
+  
+    this.initService({
+      serviceObject : {
+	ros : this.ros,
+	name : '/cloudrone/change_state',
+	messageType : 'cloudrone/ChangeState'
+      },
+      requestObject : {
+	id : input.id,
+	newstate : CLOUDRONE.STATES['Занят'] //on task
+      },
+      responseSuccess : template.success,
+      responseFailure : template.failure
+    });
+  },
+  
+  doStartDrone : function(input, template) {
+  
+    this.initService({
+      serviceObject : {
+	ros : this.ros,
+	name : '/cloudrone/change_state',
+	messageType : 'cloudrone/ChangeState'
+      },
+      requestObject : {
+	id : input.id,
+	newstate : CLOUDRONE.STATES['На задании'] //on task
+      },
+      responseSuccess : template.success,
+      responseFailure : template.failure
+    });
+  },
+  
+  doInitNodes : function(input, template) { 
+    this.initService({
+      serviceObject : {
+	ros : this.ros,
+	name : '/cloudrone/get_new_nodes',
+	messageType: 'cloudrone/GetNewNodes'
+      },
+      requestObject : {
+	fileName: input.fileName,
+	driver: input.driver
+      },
+      responseSuccess : template.success,
+      responseFailure : template.failure
+    })
+  },
+  
+  initFlightCommands : function()
+  {
+    this.flightCmdPublisher = new ROSLIB.Topic({
+        ros : this.ros,
+        name : "/tum_ardrone/com",
+        messageType : "std_msgs/String"
+    });
+  },
+  
+  
+  initMonitoring : function() {
+    
+    var model = CLOUDRONE.drones[CLOUDRONE.pickedDrone].model['topics'];
+
+    var navdata = model.navdata;
+ 
+    this.navdataListener = new ROSLIB.Topic({
+        ros : this.ros,
+        name : navdata.topic,
+        messageType : navdata.messageType
+    });
+    
+    this.navdataListener.subscribe(function(message) {
+        
+	CLOUDRONE.emptyNavdataInfo();
+	
+        var data = navdata.data;
+        var value;
+        var isValueObject;
+        
+        for(var key in data) {
+            isValueObject = data[key] instanceof Object;
+            value = (isValueObject) ? data[key].states[message[key]] : message[key];
+            CLOUDRONE.printNavdataInfo(((isValueObject) ? data[key].name : data[key]), value); 
+        }
+        
+    });
+    
+    var video = model.video;
+    
+   // if (this.viewer) {delete this.viewer;}
+    $('#droneCamera').html("");
+    
+    this.viewer = new MJPEGCANVAS.Viewer({
+        divID: 'droneCamera',
+        host: this.mjpeghostname,
+        width: video.width,
+        height: video.height,
+        topic: video.topic
+    });
+  },
+  
+  monitoringCancel : function() {
+    WORKER_COMM.navdataListener.unsubscribe();
+    WORKER_COMM.viewer = null;
+  },
+  
+  initResults : function() {
+ 
+    this.markerListener = new ROSLIB.Topic({
+      ros : this.ros,
+      name : '/cloudrone/objects',
+      messageType : 'cloudrone/Object'
+    });
+  
+    this.markerListener.subscribe(function(markers) {
+      CLOUDRONE.printMarkers(markers);
+    });
+  },
+  
+  resultCancel : function() {
+    WORKER_COMM.markerListener.unsubcribe();
+  }
+}

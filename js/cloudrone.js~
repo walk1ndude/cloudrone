@@ -1,0 +1,456 @@
+var CLOUDRONE = {
+  
+  KOSTILEV : 360.0/20.0,
+  
+  selectedDrone : 0,
+  pickedDrone : 0,
+  
+  selectedMarker : 0,
+  markerPopup : null,
+  
+  counter : 0,
+  interval : null,
+  
+  markers : {},
+  
+  drones : {},
+  
+  STATES : {
+    'Свободен' : 0,
+    'Занят' : 1,
+    'На задании' : 2
+  },
+
+  SHOWPARAMS : {
+    'SHOW_ALL' : 0,
+    'SHOW_USER' : 1,
+    'SHOW_FREE' : 2
+  },
+    
+  templates : {
+    sign : {
+      success : {
+	id : 'sign_success',
+	domElements : [
+	  {
+	    element : '#sign',
+	    method : 'hide'
+	  },
+	  {
+	    element : '#lSelectDroneMain',
+	    method : 'show'
+	  }
+	]
+      },
+      failure : {
+	id : 'sign_failure',
+	domElements : [
+	  {
+	    element : '#signState',
+	    method : 'html',
+	    params : ['Ошибка! Вход не выполнен.']
+	  }
+	]
+      }
+    },
+    
+    reg : {
+      success : {
+	id : 'reg_success',
+	domElements : [
+	  {
+	    element : '#register',
+	    method : 'hide'
+	  },
+	  {
+	    element : '#lSelectDroneMain',
+	    method : 'show'
+	  }
+	]
+      },
+      failure : {
+	id : 'reg_failure',
+	domElements : [
+	  {
+	    element : '#registerState',
+	    method : 'html',
+	    params : ['Ошибка! Регистрация не выполнена']
+	  }
+	]
+      }
+    },
+    
+    drone_show : {
+      success : {
+	id : 'drone_show_success',
+      },
+      failure : {
+	id : 'drone_show_failure',
+	alerts : ['Ошибка! Невозможно показать БИТС']
+      }
+    },
+    
+    drone_pick : {
+      success : {
+	id : 'drone_pick_success',
+	maps : ['taskMap'],
+	pages : ['FlyTask'],
+	domElements : [
+	  {
+	    element : '#droneStateControl',
+	    method : 'show'
+	  }
+	]
+      },
+      failure : {
+	id : 'drone_pick_failure',
+	alerts : ['Невозможно изменить статус БИТС']
+      }
+    },
+    
+    drone_start : {
+      success : {
+	id : 'drone_start_success',
+      },
+      failure : {
+	id : 'drone_pick_failure',
+	alerts : ['Невозможно изменить статус БИТС']
+      }
+    },
+    
+    init_nodes : {
+      success : {
+	id : 'init_nodes_success',
+      },
+      failure : {
+	id : 'init_nodes_failure',
+	alerts : ['Невозможно выполнить запуск новых нодов']
+      }
+    }
+  },
+  
+  maps : {
+    'taskMap' : {},
+    'monitorMap' : {},
+    'resultMap' : {}
+  },
+    
+  showDrones : function(response) {
+    var dronelist = {};
+    var drone;
+  
+    $('#droneTable').html('<tr><th>Фото</th><th>Имя</th><th>Модель</th><th>Расположение</th><th>Статус</th><th></th></tr>');
+  
+    for (var i = 0; i < response.model.length; i ++ ) {
+      
+      id = response.id[i];
+    
+      drone = {
+	model : eval(response.model[i]),
+	name : response.name[i],
+	location : response.location[i],
+	driver : response.driver[i],
+	state : response.state[i],
+	user : response.user[i],
+      };
+    
+      dronelist[id] = drone;
+     
+      $('#droneTable').append('<tr id="droneId' + id
+	+ '" onClick="CLOUDRONE.selectDrone(' + id + ');"><td align="center"><img src="'
+	+ drone.model.photo +'" width="50px"></img></td><td>'
+	+ drone.name + '</td><td>'
+	+ drone.model.name +'</td><td>'
+	+ drone.location +'</td><td>'
+	+ drone.state + '</td><td align="center"><button onClick="CLOUDRONE.pickDrone('
+	+ id + ');" ' + ((drone.user == localStorage.id || drone.state == CLOUDRONE.STATES['Свободен']) ? '' : 'disabled')
+	+ '>Выбрать</button></td></tr>');
+    }
+      
+    if (response.refresh) {
+      CLOUDRONE.drones = dronelist;
+    }    
+  },
+
+  selectDrone : function(id) {
+    $('#droneId' + CLOUDRONE.selectedDrone).css("background-color", "#FFFFFF");
+    $('#droneId' + id).css("background-color", "#DDDDDD");
+  
+    var specs = '';
+    var specsArray = CLOUDRONE.drones[id].model.specs;
+      
+    for (spec in specsArray) {
+      specs += '<tr><td><b>' + spec + '</b></td><td>' + specsArray[spec] + '</td></tr>'
+    }
+
+    $('#selectDroneInfo').html('<h3>Информация о выделенном БПЛА</h3><table><tr><td><img src="'
+    + CLOUDRONE.drones[id].model.photo+'" width="100px" style="float:left"></img></td><td><b>Модель:</b> '
+    + CLOUDRONE.drones[id].model.name+'</td><tr><td colspan="2"><b>Характеристики</b></td></tr>'
+    + specs + '</table>');
+  
+    CLOUDRONE.selectedDrone = id;
+  },
+  
+  unselectDrone : function() {
+    $('#selectDroneInfo').empty();
+  },
+  
+  pickDrone : function(id) {
+       /**/
+       $('#markers').empty();
+       
+    if(CLOUDRONE.drones[id].name=='TestDroneObj')
+    {
+      
+      
+      var info = '<table>';
+      info+='<tr><td>' + "<img src='object/m1.png'/>" + '</td><td>' + 'Эталон класса 1'+ '</td><td>' + 'Растр'+ '</td></tr>';
+      info+='<tr><td>' + "<img src='object/m2.png'/>" + '</td><td>' + 'Эталон класса 2'+ '</td><td>' + 'Вектор'+ '</td></tr>';
+      info+='</table>';
+      
+      $('#markers').html(info);
+    }
+    /**/
+    
+    WORKER_COMM.doPickDrone({
+	id : id
+      },
+      CLOUDRONE.templates.drone_pick);
+    
+  },
+  
+  startDrone : function(id) {
+    WORKER_COMM.doStartDrone({
+	id : id
+      },
+      CLOUDRONE.templates.drone_start);
+    
+  },
+  
+  doSign : function() {
+    return WORKER_COMM.doSign({
+	id : $('#signId').val(),
+	password : $('#signPassword').val()
+      },
+      this.templates.sign);
+  },
+  
+  doRegister : function() {
+    return WORKER_COMM.doRegister({
+	id : $('#registerId').val(),
+	password : $('#registerPassword').val()
+      },
+      this.templates.reg);
+  },
+
+  fetchMaps : function() { 
+    for (map in this.maps) {
+      this.maps[map] = L.map(map).setView([0, 0], 0);
+      L.tileLayer('../tiles/{z}/{y}/{x}.png', {maxZoom: 2,}).addTo(this.maps[map]);
+    //this.maps[map].on('click', addMarker);
+      this.maps[map].markers = [];
+    }
+  },
+ 
+  onClickStartStop : function() {
+    //if (this.counter == 0) 
+    {
+       this.counter=0;
+      $('#markersInfo').empty();
+      
+      setInterval(function() {
+	CLOUDRONE.timerClick()
+      },1000);
+      
+      WORKER_COMM.initMonitoring();
+      
+      PAGE.showPage('Monitoring');
+      
+      this.startDrone(CLOUDRONE.pickedDrone);
+      // send cmds to drone
+      for (var i = 0; i < (CLOUDRONE.drones[CLOUDRONE.pickedDrone].cmds ? CLOUDRONE.drones[CLOUDRONE.pickedDrone].length:0); i++)
+      {
+	var cmd = new ROSLIB.Message(
+	{
+	  data: CLOUDRONE.drones[CLOUDRONE.pickedDrone].cmds[i]
+	});
+	console.log(cmd);
+	WORKER_COMM.flightCmdPublisher.publish(cmd);
+      }
+    }
+   /* else {
+      clearInterval(this.interval);
+      this.counter =- 1;
+    
+      WORKER_COMM.monitoringCancel();
+      WORKER_COMM.resultCancel();
+      this.timerClick();
+    }*/
+  },
+  
+  timerClick : function() {
+    this.counter ++;
+    $('#elapsedTime').html(Math.floor(this.counter / 60)+':' + this.counter % 60);
+    $('#droneState').html(this.drones[this.selectedDrone].state);
+    
+    if(CLOUDRONE.drones[CLOUDRONE.pickDrone].name=='TestDroneObj')
+    {
+    
+      if(this.counter == 10)
+      {
+	var info = '<tr><td><div id="videoMarker">Обнаруженные маркеры:</td></tr>';
+      info += '<tr><td>' + "<img src='object/1.png'/>" + '</td><td>' + 'Класс1'+ '</td></tr>';
+      $('#markersInfo').append(info);
+      }
+      
+      
+      if(this.counter == 12)
+      {
+      var info = '<tr><td>' + "<img src='object/2.png'/>" + '</td><td>' + 'Класс2'+ '</td></tr>';
+      $('#markersInfo').append(info);
+      }
+    }
+    
+  },
+  
+  emptyNavdataInfo : function() {
+    $('#sensorsInfo').empty();
+  },
+  
+  printNavdataInfo : function(data, value) {
+    $('#sensorsInfo').append('<tr><td>' + data + '</td><td>' + value  + '</td></tr>'); 
+  },
+  
+  printMarkers : function(marker) {
+    //$('#markersInfo').empty();
+    
+    var info = '<tr><td><div id="videoMarker">Обнаруженные маркеры:</td></tr>';
+    /*for(field in marker) {
+      if (marker.hasOwnProperty(field) && field != 'view') {
+	info += '<tr><td>' + field + '</td><td>' + marker[field] + '</td></tr>';
+      }
+    }*/
+    info += '<tr><td>' + "<img src='object/"+marker["viewid"]+".png'/>" + '</td><td>' + (marker["classid"] == 1 ? 'Класс1':'Класс2')+ '</td></tr>';
+   // $('#markersInfo').append(info);
+  },
+  
+  loadFlightTask : function(evt) {
+    var patt = new RegExp(/^[ \t]*goto([ \t]*(\-)?(\d)*(\.)?(\d)*){4}[ \t]*$/);
+  
+    
+
+    
+    function sendCommands(flightPlan) {
+  
+      
+       
+    
+      
+     for(i in CLOUDRONE.maps.taskMap._layers) {
+         if(CLOUDRONE.maps.taskMap._layers[i]._path != undefined) {
+	    CLOUDRONE.maps.taskMap.removeLayer(CLOUDRONE.maps.taskMap._layers[i]);
+	 }
+      }
+	
+      CLOUDRONE.drones[CLOUDRONE.pickedDrone].cmds = ["c clearCommands", "c start"];
+	  
+      if (flightPlan.length > 0)
+	{	  
+	  var flightCmds = flightPlan.split('\n');
+	  var markerId = 0;
+	  
+	  for (var c = 0; c < flightCmds.length; c++)
+	  {
+	    if (!!flightCmds[c]) {
+	         
+	      if (flightCmds[c].match(patt)) { // if goto numbers
+		var numbers = flightCmds[c].trim().split(" ");
+		
+		console.log(flightCmds[c]);
+		
+		for (var j = 1; j <= 2; j++)
+		{
+		  numbers[j] *= CLOUDRONE.KOSTILEV;
+		  while (numbers[j] < 0) numbers[j] += 360.;
+		  while (numbers[j] > 360) numbers[j] -= 360.;
+		}
+		
+		
+		CLOUDRONE.maps.taskMap.markers[markerId ++] = L.marker([numbers[1], numbers[2]]).addTo(CLOUDRONE.maps.taskMap);
+		//CLOUDRONE.maps.taskMap.markers[markerId ++] = L.marker([numbers[3]*CLOUDRONE.KOSTILEV, //numbers[4]*CLOUDRONE.KOSTILEV]).addTo(CLOUDRONE.maps.taskMap);
+	      }
+	      
+	      
+	      CLOUDRONE.drones[CLOUDRONE.pickedDrone].cmds.push("c " + flightCmds[c]);
+	      console.log(flightCmds[c]);
+	      //var cmd = new ROSLIB.Message(
+	      //{
+		//data: "c " + flightCmds[c]
+	      //});
+	      //WORKER_COMM.flightCmdPublisher.publish(cmd);
+	      
+	    }
+	  }
+	}
+    }
+    
+    function drawPolyline() {
+      var map = CLOUDRONE.maps.taskMap
+      var markers = [];
+      
+      for (var i = 0; i < map.markers.length; i++) {
+	markers.push(map.markers[i].getLatLng());
+      }
+      
+      L.polyline(markers,{color: 'red'}).addTo(map);
+    }
+    
+    var files = evt.target.files; // FileList object
+
+    // Loop through the FileList and render image files as thumbnails.
+    for (var i = 0, f; f = files[i]; i++) {
+
+      var reader = new FileReader();
+      
+      reader.onload = function(e) {
+	  var xml = e.target.result;
+	
+	  sendCommands($(xml).find("flightPlan").text()); 
+	  
+	  drawPolyline();
+	  
+	  var objectList = $(xml).find("objectList").text();
+      };
+
+      // Read in the image file as a data URL.
+      reader.readAsBinaryString(f);
+    }
+  },
+  
+
+  
+  addMarker : function(e) {
+    m = L.marker(e.latlng).addTo(maps['taskMap']);
+      this.markers[m['_leaflet_id']]={};
+      this.markers[m['_leaflet_id']].marker=m;
+      this.markers[m['_leaflet_id']].latlng=m['_latlng'];
+      this.markers[m['_leaflet_id']].checked='checked';
+      this.markers[m['_leaflet_id']].photo='../images/drones/no-available-image.png';
+      this.markers[m['_leaflet_id']].type='Тип';
+      this.markers[m['_leaflet_id']].info='Дополнительная информация';
+/*	$('#markerstable').append('<tr id="marker_id'+m['_leaflet_id']+'" onClick="markerselected('+m['_leaflet_id']+');"><td><input type="checkbox" '+markers[m['_leaflet_id']].checked+'></input></td><td><img src="'+markers[m['_leaflet_id']].photo+'" width="50px"></img></td><td>'+markers[m['_leaflet_id']].type+'</td><td>'+markers[m['_leaflet_id']].info+'</td></tr>');*/
+   },
+   
+   markerSelected : function markerSelected(id) {
+      if (this.markers[this.selectedMarker]) {
+	$('#markerId'+ this.selectedMarker).css("background-color", "#FFFFFF");
+	CLOUDRONE.markers[CLOUDRONE.selectedMarker].marker.closePopup();
+    CLOUDRONE.markers[CLOUDRONE.selectedMarker].marker.togglePopup();
+   }
+   
+   $('#markerId'+id).css("background-color", "#DDDDDD");
+   CLOUDRONE.selectedMarker=id;
+   $('#delMarker').show();
+   CLOUDRONE.markers[CLOUDRONE.selectedMarker].marker.bindPopup("Выбран").openPopup();
+}
+}  

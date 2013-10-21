@@ -1,0 +1,20 @@
+$(document).ready(function() {
+  
+  Number.prototype.mod = function(n) { return ((this%n)+n)%n; }
+  
+  PAGE.setPages();
+  PAGE.fetchRadioSelectDrones();
+    
+  WORKER_COMM.initRos({
+    roshostname : 'localhost',
+    rosport : 9090
+  });
+    
+  PAGE.showPage('Main');
+  
+  WORKER_COMM.doSign({id : localStorage.id}, CLOUDRONE.templates.sign);
+ 
+  CLOUDRONE.fetchMaps();
+  
+  document.getElementById('flightTaskInput').addEventListener('change', CLOUDRONE.loadFlightTask, false);
+})
