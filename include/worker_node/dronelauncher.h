@@ -1,7 +1,7 @@
 #include <ros/ros.h>
 
-#include <qt/QtCore/QMap>
-#include <qt/QtCore/QThread>
+#include <QtCore/QMap>
+#include <QtCore/QThread>
 
 #include <cloudrone/Drone.h>
 #include "worker_node/drone.h"

@@ -1,8 +1,8 @@
-#include <qt/QtCore/QObject>
-#include <qt/QtCore/QThread>
-#include <qt/QtCore/QString>
-#include <qt/QtCore/QProcess>
-#include <qt/QtCore/QDebug>
+#include <QtCore/QObject>
+#include <QtCore/QThread>
+#include <QtCore/QString>
+#include <QtCore/QProcess>
+#include <QtCore/QDebug>
 
 class Drone : public QObject {
   Q_OBJECT

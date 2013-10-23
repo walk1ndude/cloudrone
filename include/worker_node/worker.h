@@ -1,6 +1,6 @@
 #include <ros/ros.h>
 
-#include <qt/QtSql/QSqlDatabase>
+#include <QtSql/QSqlDatabase>
 
 //=====================GET HEADERS CLOUDRONE======================//
 

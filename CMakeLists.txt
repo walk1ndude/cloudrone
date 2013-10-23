@@ -20,11 +20,11 @@ include_directories(include)
 #worker_node
 
 file(GLOB_RECURSE QT_MOC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINKS
-  include/worker_node/*)
+  include/worker_node/*.h)
 QT5_WRAP_CPP(QT_MOC_HPP ${QT_MOC})
 
 file(GLOB_RECURSE QT_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINKS
-  src/worker_node/*
+  src/worker_node/*.cpp
 )
 
 add_executable(worker_node ${QT_SOURCES} ${QT_MOC_HPP})

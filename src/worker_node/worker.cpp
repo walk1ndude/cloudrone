@@ -1,15 +1,15 @@
 #include <iostream>
-#include <qt/QtSql/QSqlQuery>
+#include <QtSql/QSqlQuery>
 
-#include <qt/QtCore/QVariant>
+#include <QtCore/QVariant>
 
-#include <qt/QtCore/QFile>
-#include <qt/QtCore/QIODevice>
-#include <qt/QtCore/QTextStream>
+#include <QtCore/QFile>
+#include <QtCore/QIODevice>
+#include <QtCore/QTextStream>
 
-#include <qt/QtCore/QThread>
+#include <QtCore/QThread>
 
-#include <qt/QtCore/QDir>
+#include <QtCore/QDir>
 
 #include "worker_node/worker.h"
 #include <cloudrone/User.h>

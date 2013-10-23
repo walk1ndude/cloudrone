@@ -1,5 +1,5 @@
-#include <qt/QtCore/QObject>
-#include <qt/QtCore/QMultiMap>
+#include <QtCore/QObject>
+#include <QtCore/QMultiMap>
 
 //=======================STATES=================================//
 
