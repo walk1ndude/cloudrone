@@ -1,5 +1,5 @@
 #include <qt/QtCore/QCoreApplication>
-#include "worker_node/worker.h"
+#include <worker_node/worker.h>
 
 #define NODE_RATE 10
 

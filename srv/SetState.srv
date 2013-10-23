@@ -1,7 +1,5 @@
-int32 id
-int32 pstate
-int32 nstate
+cloudrone/State state
+int32 newstate
 ---
-int32 id
-int32 sstate
+cloudrone/State state
 uint32 error

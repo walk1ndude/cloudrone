@@ -1,12 +1,14 @@
 #include "marker_detection_node/marker_detection_node.h"
 
-ObjectDetector::ObjectDetector() : it(handle)
+ObjectDetector::ObjectDetector() : it(handle), _handle("~")
 {
     camera_image = it.subscribe("ardrone/image_raw", 1, &ObjectDetector::onImage, this);
     navdata_sub = handle.subscribe("ardrone/navdata", 1, &ObjectDetector::onNavdata, this);
     objects_pub = handle.advertise<cloudrone::Object>("cloudrone/objects", 1);
+    
+    _handle.param("calibdata", calibdata, std::string(CAMERA_PARAMS_FILE));
 
-    loadCameraCalibration(CAMERA_PARAMS_FILE);
+    loadCameraCalibration(calibdata);
 
     cascadeDetectors.resize(2);
     cascadeDetectors[0].first.load("/home/ardrone/cascadeTreeLBP.xml");

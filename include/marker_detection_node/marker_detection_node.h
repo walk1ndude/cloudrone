@@ -39,12 +39,15 @@ public:
 private:
 
     ros::NodeHandle handle;
+    ros::NodeHandle _handle;
     ros::Subscriber navdata_sub;
     ros::Publisher objects_pub;
 
     image_transport::ImageTransport it;
     image_transport::Subscriber camera_image;
     cv_bridge::CvImagePtr cv_ptr;
+    
+    std::string calibdata;
 
     // frame
     Mat K, D;

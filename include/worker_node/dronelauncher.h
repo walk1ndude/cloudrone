@@ -1,9 +1,12 @@
 #include <ros/ros.h>
 
 #include <qt/QtCore/QMap>
+#include <qt/QtCore/QThread>
 
 #include <cloudrone/Drone.h>
-#include "worker_node/dronethread.h"
+#include "worker_node/drone.h"
+
+#define TOPIC_DRONELAUNCHER "cloudrone/dronelauncher"
 
 class DroneLauncher : public QObject {
   Q_OBJECT
@@ -15,8 +18,11 @@ public:
   void addDrone(const int & id, const QString & program);
   
 private:
-  QMap<int,DroneThread*>drones;
+  QMap<int,Drone*>drones;
   
 private slots:
-  void removeDrone(int exitCode);
+  void removeDrone(Drone * drone);
+  
+signals:
+  void signalTaskCompleted(const int & id);
 };

@@ -113,7 +113,7 @@ CREATE TABLE `states` (
 
 LOCK TABLES `states` WRITE;
 /*!40000 ALTER TABLE `states` DISABLE KEYS */;
-INSERT INTO `states` VALUES (0,'Free'),(1,'Selected'),(2,'OnTask');
+INSERT INTO `states` VALUES (0,'Free'),(1,'Selected'),(2,'OnTask'),(3,'TaskCompleted');
 /*!40000 ALTER TABLE `states` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -204,4 +204,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-10-21  6:26:58
+-- Dump completed on 2013-10-23  4:10:02

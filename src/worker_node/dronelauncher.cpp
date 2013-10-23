@@ -8,28 +8,46 @@ DroneLauncher::~DroneLauncher() {
 
 }
 
-void DroneLauncher::addDrone(const int& id, const QString& program) {
+void DroneLauncher::addDrone(const int & id, const QString & program) {
   
-  DroneThread * drone = new DroneThread(program);
+  QThread * droneThread = new QThread;
+  Drone * drone = new Drone;
+  
+  QObject::connect(droneThread, &QThread::started, drone, &Drone::startTask);
+  QObject::connect(drone, (void (Drone::*)(Drone*))&Drone::signalTaskFinished,
+		   this, (void (DroneLauncher::*)(Drone*))&DroneLauncher::removeDrone, Qt::DirectConnection);
+  QObject::connect(drone, &Drone::destroyed, droneThread, &QThread::quit);
+  QObject::connect(droneThread, &QThread::finished, droneThread, &QThread::deleteLater);
+  
+  drone->setID(id);
+  drone->setProgram(program);
+  
+  drone->moveToThread(droneThread);
+  
   drones.insert(id, drone);
   
-  QProcess * process = drone->getProcess();
+  droneThread->start();
   
-  QObject::connect(process, SIGNAL(finished(int)), this, SLOT(removeDrone(int)));
-  //QObject::connect(drone, (void (DroneThread::*)())&DroneThread::finished, this, &DroneThread::deleteLater);
+  QProcess * process = NULL;
+ 
+  while (process == NULL) {
+    process = drone->getProcess();
+    sleep(1);
+  }
   
-  drone->start();
+  while (process->state() != QProcess::Running) {
+    sleep(1);
+  }
 }
 
-void DroneLauncher::removeDrone(int exitCode) {
+void DroneLauncher::removeDrone(Drone * drone) {
+
+  int id = drone->getID();
+  drones.remove(id);
   
- /* QProcess * process = qobject_cast<QProcess*>(QObject::sender());
-  DroneThread * drone = qobject_cast<DroneThread*>(process->thread());
-  drones.remove(drones.key(drone));
+  delete drone;
   
-  drone->deleteLater();
-  */
-  std::cout << "WIN" << std::endl;
+  emit signalTaskCompleted(id);
 }
 
 

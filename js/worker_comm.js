@@ -30,7 +30,7 @@ if (!response.error) { // 'cause 0 is a success
       });
   },
   
-  serviceResponse : function(response, template) {    
+  serviceResponse : function(response, template) {
    switch (template.id) {
       case 'drone_show_success' :
 	CLOUDRONE.unselectDrone();
@@ -38,12 +38,12 @@ if (!response.error) { // 'cause 0 is a success
 	break;
 	
       case 'drone_pick_success' :
-	CLOUDRONE.setState(response.id, response.sstate);
+	CLOUDRONE.setState(response.state.id, response.state.state);
 	$('#flightTaskInput').removeAttr('disabled');
 	break;
 	
       case 'drone_start_success' :
-	CLOUDRONE.setState(response.id, CLOUDRONE.STATES['WaitNavdata']); // first wait for navdata, then send commands
+	CLOUDRONE.setState(response.state.id, CLOUDRONE.STATES['WaitNavdata']); // first wait for navdata, then send commands
 	this.initMonitoring(CLOUDRONE.pickedDrone);
 	break;
     };
@@ -76,7 +76,8 @@ if (!response.error) { // 'cause 0 is a success
       alert(template.alerts[id]);
     }
   },
- doSign : function(input, template) {
+  
+  doSign : function(input, template) {
     this.initService({
       serviceObject : {
 	ros : this.ros,
@@ -137,9 +138,8 @@ if (!response.error) { // 'cause 0 is a success
 	messageType : 'cloudrone/SetState'
       },
       requestObject : {
-	id : input.id,
-	pstate : input.pstate,
-	nstate : input.nstate
+	state : input.state,
+	newstate : input.newstate
      },
       responseSuccess : template.success,
       responseFailure : template.failure
@@ -161,6 +161,7 @@ if (!response.error) { // 'cause 0 is a success
       responseFailure : template.failure
     })
   },
+  
   initFlightCommands : function(pickedDrone) {
     
     function initFlightCommand(cmd) {
@@ -188,14 +189,14 @@ if (!response.error) { // 'cause 0 is a success
     
     var model = CLOUDRONE.drones[pickedDrone].model['topics'];
 
-    var namespace = '/drone' + pickedDrone + '/';
+    var namespace = '/drone' + pickedDrone;
     
     var navdata = model.navdata;
  
     this.navdataListener = new ROSLIB.Topic({
-        ros : this.ros,
-       name : namespace + navdata.topic,
-       messageType : navdata.messageType
+      ros : this.ros,
+      name : namespace + navdata.topic,
+      messageType : navdata.messageType
     });
     
     this.navdataListener.subscribe(function(message) {
@@ -213,18 +214,15 @@ if (!response.error) { // 'cause 0 is a success
         var isValueObject;
         
         for(var key in data) {
-	  if (data.hasOwnProperty(key)) {
-            isValueObject = data[key] instanceof Object;
-            value = (isValueObject) ? data[key].states[message[key]] : message[key];
-            CLOUDRONE.printNavdataInfo(((isValueObject) ? data[key].name : data[key]), value);
-	  }
+          isValueObject = data[key] instanceof Object;
+          value = (isValueObject) ? data[key].states[message[key]] : message[key];
+          CLOUDRONE.printNavdataInfo(((isValueObject) ? data[key].name : data[key]), value);
         }
         
     });
     
     var video = model.video;
    
-   // if (this.viewer) {delete this.viewer;}
     $('#droneCamera').html("");
     
     this.viewer = new MJPEGCANVAS.Viewer({
@@ -235,12 +233,22 @@ if (!response.error) { // 'cause 0 is a success
         height: video.height,
         topic: namespace + video.topic
     });
- },
+    
+    this.stateWatcher = new ROSLIB.Topic({
+      ros : this.ros,
+      name : 'get_state',
+      messageType : 'cloudrone/State'
+    });
+    
+    this.stateWatcher.subscribe(function(message) {
+      CLOUDRONE.setState(message.id, message.state);
+    });
+  },
   
   monitoringCancel : function() {
     WORKER_COMM.navdataListener.unsubscribe();
     WORKER_COMM.viewer = null;
- },
+  },
   
   initResults : function() {
  
@@ -257,5 +265,5 @@ if (!response.error) { // 'cause 0 is a success
   
   resultCancel : function() {
     WORKER_COMM.markerListener.unsubcribe();
- }
   }
+}

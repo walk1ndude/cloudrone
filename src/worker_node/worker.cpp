@@ -23,7 +23,9 @@ Worker::Worker(QObject * parent) :
   
   if (fetchDatabase()) {
     fetchServices();
-    fetchFSM();
+    fetchPublishers();
+    fetchDroneLauncher();
+    fetchStateSet();
   }
 }
 
@@ -54,7 +56,7 @@ void Worker::closeDatabase() {
 }
 
 void Worker::fetchPublishers() {
-  killNotifier = nh.advertise<cloudrone::Drone>(TOPIC_NOTIFY_KILL, 1);
+  taskCompletedPublisher = nh.advertise<cloudrone::State>(TOPIC_GET_STATE, 1);
 }
 
 void Worker::fetchServices() {
@@ -71,7 +73,7 @@ void Worker::fetchServices() {
 
 template <class ResponseT> bool Worker::respond(ResponseT & res, int error) {
   res.error = error;
-  return (error == EVERYTHINGS_FINE) ? true : false;
+  return true;
 };
 
 template <class ResponseT> bool Worker::checkDB(ResponseT & res) {
@@ -80,8 +82,14 @@ template <class ResponseT> bool Worker::checkDB(ResponseT & res) {
   }
 };
 
-void Worker::fetchFSM() {
-  fsm.fetchRules();
+void Worker::fetchDroneLauncher() {
+  droneLauncher = new DroneLauncher(this);
+  QObject::connect(droneLauncher, &DroneLauncher::signalTaskCompleted, this, &Worker::notifyCompletedID, Qt::DirectConnection);
+}
+
+void Worker::fetchStateSet() {
+  stateSet = new StateSet(this);
+  stateSet->fetchRules();
 }
 
 bool Worker::registerUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response & res) {
@@ -134,8 +142,6 @@ bool Worker::signUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response 
   res.id = req.user.id;
   return respond(res, EVERYTHINGS_FINE);
 }
-
-
 
 bool Worker::getMarkers(cloudrone::GetMarkers::Request & req, cloudrone::GetMarkers::Response & res) {
   
@@ -202,32 +208,31 @@ bool Worker::setState(cloudrone::SetState::Request & req, cloudrone::SetState::R
   }
   
   QSqlQuery query;
-  res.id = req.id;
+  res.state = req.state;
   
-  if (fsm.isApplicable(req.pstate, req.nstate)) {
+  if (stateSet->isApplicable(req.state.state, req.newstate)) {
     
     query.prepare("UPDATE drones SET state=:nstate WHERE id=:id;");
-    query.bindValue(":id", req.id);
-    query.bindValue(":nstate", req.nstate);
+    query.bindValue(":id", req.state.id);
+    query.bindValue(":nstate", req.newstate);
     
-    res.sstate = req.nstate;
+    res.state.state = req.newstate;
   
     if (!query.exec()) {
       return respond(res, ERROR_CANT_SET_STATE);
     }
     
-    if (req.pstate == STATE_SELECTED && req.nstate == STATE_ONTASK) {
-      return launchNodesByID(req.id, res);
+    if (req.state.state == STATE_SELECTED && req.newstate == STATE_ONTASK) {
+      return startTaskByID(req.state.id, res);
     }
-    else if (req.pstate == STATE_ONTASK && (req.nstate == STATE_FREE || req.nstate == STATE_SELECTED)) {
-      return killNodesByID(req.id, res);
+    else if (req.state.state == STATE_ONTASK && (req.newstate == STATE_FREE || req.newstate == STATE_SELECTED)) {
+      return finishTaskByID(req.state.id, res);
     }
     
     return respond(res, EVERYTHINGS_FINE);
   }
 
   else {
-    res.sstate = req.pstate;
     return respond(res, ERROR_CANT_SET_STATE);
   }
 
@@ -247,7 +252,7 @@ QString Worker::getDriver(int id) {
   return query.value(0).toString();
 }
 
-template <class ResponseT> bool Worker::killNodesByID(int id, ResponseT & res) {
+template <class ResponseT> bool Worker::finishTaskByID(int id, ResponseT & res) {
   /*
   QProcess * procToKill = drones.find(id).value();
   procToKill->kill();
@@ -261,7 +266,7 @@ template <class ResponseT> bool Worker::killNodesByID(int id, ResponseT & res) {
   return respond(res, EVERYTHINGS_FINE);
 }
 
-template <class ResponseT> bool Worker::launchNodesByID(int id, ResponseT & res) {
+template <class ResponseT> bool Worker::startTaskByID(int id, ResponseT & res) {
   
   QString fileName = QDir::homePath() + "/.ros/drone" + QString::number(id) + ".launch";
   QFile file(fileName);
@@ -294,14 +299,14 @@ template <class ResponseT> bool Worker::launchNodesByID(int id, ResponseT & res)
     << "<remap from=\"/cloudrone/image_raw\" to=\"/" + drone + "/cloudrone/image_raw\" />" << endl
     << launchDriver << endl
     << "<node pkg=\"cloudrone\" type=\"marker_detection_node\" name=\"marker_detection_node\" />" << endl
-    //<< "<node pkg=\"tum_ardrone\" type=\"drone_stateestimation\" name=\"drone_stateestimation\" />" << endl
+    << "<node pkg=\"tum_ardrone\" type=\"drone_stateestimation\" name=\"drone_stateestimation\" />" << endl
     << "<node pkg=\"tum_ardrone\" type=\"drone_autopilot\" name=\"drone_autopilot\" />" << endl
     << "</group>" << endl
     << "</launch>" << endl;
     
     file.close();
     
-    droneLauncher.addDrone(id, "roslaunch " + fileName);
+    droneLauncher->addDrone(id, "roslaunch " + fileName);
    
     return respond(res, EVERYTHINGS_FINE);
   }
@@ -310,24 +315,12 @@ template <class ResponseT> bool Worker::launchNodesByID(int id, ResponseT & res)
   }
 }
 
-void Worker::notifyKillID(int exitCode, QProcess::ExitStatus exitStatus) {
+void Worker::notifyCompletedID(const int & id) {
+  cloudrone::State state;
+  state.id = id;
+  state.state = STATE_TASKCOMPLETED;
   
- /* QProcess * process = qobject_cast<QProcess*>(QObject::sender());
-  int id = drones.key(process);
-  
-  std::cout << "HERRREEE" << std::endl;
-  
-  QThread * thread = process->thread();
-  
-  process->deleteLater();
-  thread->deleteLater();
-  drones.remove(id);
-  
-  /*
-  cloudrone::Drone killedDrone;
-  killedDrone.id = id;
-  killNotifier.publish(killedDrone);
-  */
+  taskCompletedPublisher.publish(state);
 }
 
 

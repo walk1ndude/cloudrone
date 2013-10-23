@@ -16,11 +16,12 @@ var CLOUDRONE = {
   drones : {},
   
   STATES : {
-   'Free' : 0,
+    'Free' : 0,
     'Selected' : 1,
     'OnTask' : 2,
-    'WaitTask' : 3,
-    'WaitNavdata' : 4 // special status (not present in db), for sending commands only on first navdata arrival
+    'TaskCompleted' : 3,
+    'WaitTask' : 4,
+    'WaitNavdata' : 5, // special status (not present in db), for sending commands only on first navdata arrival
   },
   
   WRITESTATES : {
@@ -31,7 +32,7 @@ var CLOUDRONE = {
   },
 
   SHOWPOLICY : {
-   'SHOW_ALL' : 0,
+    'SHOW_ALL' : 0,
     'SHOW_USER' : 1,
     'SHOW_FREE' : 2
   },
@@ -238,9 +239,11 @@ var CLOUDRONE = {
     this.pickedDrone = id;
     
     WORKER_COMM.doSetState({
-	id : id,
-	pstate : CLOUDRONE.drones[id].state,
-	nstate : CLOUDRONE.STATES['Selected']
+	state : {
+	  id : id,
+	  state : CLOUDRONE.drones[id].state
+	},
+	newstate : CLOUDRONE.STATES['Selected']
       },
       CLOUDRONE.templates.drone_pick);
     
@@ -248,6 +251,16 @@ var CLOUDRONE = {
   
   setState : function(id, sstate) {
     CLOUDRONE.drones[id].state = sstate;
+    
+    if (sstate == this.STATES['TaskCompleted']) {
+      PAGE.showPage('Result');
+      $('#droneState').html(CLOUDRONE.WRITESTATES['OnComplete']);
+      CLOUDRONE.stopTheClocks(CLOUDRONE.clocks);
+      CLOUDRONE.setButtons({
+	toEnable : ['#bStart'],
+	toDisable : ['#bStop']
+      });
+    }
   },
   
   getState : function(id) {
@@ -290,26 +303,29 @@ var CLOUDRONE = {
     function onSelected() {
       $('#markersInfo').empty();
       
-      $('#Stop').attr('disabled', '');
-      $('#bStart').attr('disabled', 'disabled');
-      
+      CLOUDRONE.setButtons({
+	toEnable : ['#bStop'],
+	toDisable : ['#bStart']
+      });
+     
       drone.taskTime = new Date().getTime();
       
-      $('#elapsedTime').html('0:0');
+      $('#elapsedTime').html('00:00:00');
       $('#droneState').html(CLOUDRONE.WRITESTATES['OnTask']);
 	
       PAGE.showPage('Monitoring');
       
       WORKER_COMM.doSetState({
-	id : pickedDrone,
-	pstate : state,
-	nstate : CLOUDRONE.STATES['OnTask']
+	state : {
+	  id : pickedDrone,
+	  state : state
+	},
+	newstate : CLOUDRONE.STATES['OnTask']
       },
       CLOUDRONE.templates.drone_start);
       
-      setInterval(function() {
-	CLOUDRONE.timerClick()
-      },1000); 
+      CLOUDRONE.clocks = CLOUDRONE.startTheClocks(CLOUDRONE.timerClick, 1000);
+     
     };
     
     switch (state) {
@@ -325,9 +341,14 @@ var CLOUDRONE = {
     var state = CLOUDRONE.getState(pickedDrone);
     
     function onTask() {
-      $('#bStop').prop('disabled', true);
-      $('#bStart').prop('disabled', false);
       
+      CLOUDRONE.stopTheClocks(CLOUDRONE.clocks);
+      
+      CLOUDRONE.setButtons({
+	toEnable : ['#bStart'],
+	toDisable : ['#bStop']
+      });
+     
       WORKER_COMM.killNodes({
 	drone : drone
       });
@@ -349,10 +370,20 @@ var CLOUDRONE = {
     var drone = CLOUDRONE.drones[pickedDrone];
     
     var currentTime = new Date().getTime() - drone.taskTime;
-    var minutes = Math.floor(currentTime / 60000);
-    var seconds = Math.floor((currentTime / 1000) % 60);
-    $('#elapsedTime').html(((minutes < 10) ? '0' : '') + minutes + ':' + ((seconds < 10) ? '0' : '') + seconds);
-   
+    
+    var timeSeconds = Math.floor(currentTime / 1000);
+    
+    var hours = Math.floor(timeSeconds / 3600);
+    var minutes = Math.floor((timeSeconds % 3600) / 60);
+    var seconds = Math.floor((timeSeconds % 3600) % 60);
+    
+    function addLeadZero(number) {
+      return ((number < 10) ? '0' : '') + number;
+    }
+    
+    $('#elapsedTime').html( addLeadZero(hours) + ':'
+			  + addLeadZero(minutes) + ':'
+			  + addLeadZero(seconds));
     /*
     if(CLOUDRONE.drones[CLOUDRONE.pickedDrone].name=='TestDroneObj')
     {
@@ -372,14 +403,37 @@ var CLOUDRONE = {
       }
     }
     */
- },
+  },
+  
+  startTheClocks : function(method, interval, params) {
+    return setInterval(function(){
+      method(params);
+    }, interval); 
+  },
+  
+  stopTheClocks : function(clocks) {
+    clearInterval(clocks);
+  },
+  
+  setButtons : function(buttons) {
+    var bEnable = buttons.toEnable;
+    var bDisable = buttons.toDisable;
+    
+    for (var i = 0; i < ((bEnable) ? bEnable.length : 0); i ++) {
+      $(bEnable[i]).removeAttr('disabled');
+    }
+    for (var i = 0; i < ((bDisable) ? bDisable.length : 0); i ++) {
+      $(bDisable[i]).attr('disabled', 'disabled');
+    }
+  },
   
   emptyNavdataInfo : function() {
     $('#sensorsInfo').empty();
   },
   
   printNavdataInfo : function(data, value) {
-   $('#sensorsInfo').append('<tr><td>' + data + '</td><td>' + Math.round(value * 1000) / 1000  + '</td></tr>'); 
+  $('#sensorsInfo').append('<tr><td>' + data + '</td><td>'
+    + (isNaN(value) ? value : Math.round(value * 1000) / 1000)  + '</td></tr>'); 
   },
   
   printMarkers : function(marker) {
@@ -459,13 +513,15 @@ var CLOUDRONE = {
       reader.readAsBinaryString(f);
     }
     
-    $('#bStart').removeAttr('disabled');
-    $('#droneState').html(CLOUDRONE.WRITESTATES['WaitLaunch']);
+    CLOUDRONE.setButtons({
+      toEnable : ['#bStart'],
+    });
     
+    $('#droneState').html(CLOUDRONE.WRITESTATES['WaitLaunch']);
   },
   
   //very old and untested code, maybe del ?
-  
+  /*
   addMarker : function(e) {
     m = L.marker(e.latlng).addTo(maps['taskMap']);
       this.markers[m['_leaflet_id']]={};
@@ -475,7 +531,8 @@ var CLOUDRONE = {
       this.markers[m['_leaflet_id']].photo='../images/drones/no-available-image.png';
       this.markers[m['_leaflet_id']].type='Тип';
       this.markers[m['_leaflet_id']].info='Дополнительная информация';
-/*	$('#markerstable').append('<tr id="marker_id'+m['_leaflet_id']+'" onClick="markerselected('+m['_leaflet_id']+');"><td><input type="checkbox" '+markers[m['_leaflet_id']].checked+'></input></td><td><img src="'+markers[m['_leaflet_id']].photo+'" width="50px"></img></td><td>'+markers[m['_leaflet_id']].type+'</td><td>'+markers[m['_leaflet_id']].info+'</td></tr>');*/
+	$('#markerstable').append('<tr id="marker_id'+m['_leaflet_id']+'" onClick="markerselected('+m['_leaflet_id']+');"><td><input type="checkbox" '+markers[m['_leaflet_id']].checked+'></input></td><td><img src="'+markers[m['_leaflet_id']].photo+'" width="50px"></img></td><td>'+
+	markers[m['_leaflet_id']].type+'</td><td>'+markers[m['_leaflet_id']].info+'</td></tr>');
    },
    
    markerSelected : function markerSelected(id) {
@@ -489,5 +546,5 @@ var CLOUDRONE = {
    CLOUDRONE.selectedMarker=id;
    $('#delMarker').show();
    CLOUDRONE.markers[CLOUDRONE.selectedMarker].marker.bindPopup("Выбран").openPopup();
-}
+  }*/
 }  

@@ -4,8 +4,6 @@
 
 //=====================GET HEADERS CLOUDRONE======================//
 
-#include "FSM.h"
-
 #include <cloudrone/Auth.h>
 
 #include <cloudrone/GetDrones.h>
@@ -15,6 +13,7 @@
 
 #include <cloudrone/KillNodes.h>
 
+#include <worker_node/stateset.h>
 #include <worker_node/dronelauncher.h>
 
 //=====================TOPICS==================================//
@@ -31,7 +30,7 @@
 #define TOPIC_LAUNCH_NODES "launch_nodes"
 #define TOPIC_KILL_NODES "kill_nodes"
 
-#define TOPIC_NOTIFY_KILL "notify_kill"
+#define TOPIC_GET_STATE "get_state"
 
 //=======================VIEW POLICY============================//
 
@@ -90,21 +89,18 @@ private:
   
   QSqlDatabase db;
   
-  FSM fsm;
+  StateSet * stateSet;
   
-  DroneLauncher droneLauncher;
+  DroneLauncher * droneLauncher;
    
   ros::ServiceServer registerService;
   ros::ServiceServer signService;
-  
   ros::ServiceServer getMarkerService;
   ros::ServiceServer getDronesService;
-  
   ros::ServiceServer setStateService;
-  
   ros::ServiceServer killNodesService;
   
-  ros::Publisher killNotifier;
+  ros::Publisher taskCompletedPublisher;
    
   template <class ResponseT> bool respond(ResponseT & res, int error);
   template <class ResponseT> bool checkDB(ResponseT & res);
@@ -112,7 +108,8 @@ private:
   void setDefaults();
   void fetchServices();
   void fetchPublishers();
-  void fetchFSM();
+  void fetchDroneLauncher();
+  void fetchStateSet();
   bool fetchDatabase();
   
   void closeDatabase();
@@ -126,11 +123,11 @@ private:
   
   bool setState(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res);
   
-  template <class ResponseT> bool killNodesByID(int id, ResponseT & res);
-  template <class ResponseT> bool launchNodesByID(int id, ResponseT & res);
+  template <class ResponseT> bool finishTaskByID(int id, ResponseT & res);
+  template <class ResponseT> bool startTaskByID(int id, ResponseT & res);
   
   bool killNodes(cloudrone::KillNodes::Request & req, cloudrone::KillNodes::Response & res);
 
 private slots:
-  void notifyKillID(int exitCode, QProcess::ExitStatus exitStatus);
+  void notifyCompletedID(const int & id);
 };
