@@ -6,8 +6,6 @@
 #include <cloudrone/Drone.h>
 #include "worker_node/drone.h"
 
-#define TOPIC_DRONELAUNCHER "cloudrone/dronelauncher"
-
 class DroneLauncher : public QObject {
   Q_OBJECT
 
