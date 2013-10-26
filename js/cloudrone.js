@@ -1,14 +1,13 @@
 var CLOUDRONE = {
   
- KOSTILEV : 360.0/20.0,
+  KOSTILEV : 360.0/20.0,
   
- selectedDrone : 0,
-  pickedDrone : 0,
+  selectedDrone : -1,
+  pickedDrone : -1,
   
   selectedMarker : 0,
   markerPopup : null,
   
-  counter : 0,
   interval : null,
   
   markers : {},
@@ -100,10 +99,18 @@ var CLOUDRONE = {
       }
     },
     
+    drone_user_free : {
+      success : {
+	id : 'drone_user_free_success',
+      },
+      failure : {
+	id : 'drone_user_free_failure',
+      }
+    },
+    
     drone_pick : {
       success : {
 	id : 'drone_pick_success',
-	maps : ['taskMap'],
 	pages : ['FlightTask'],
       },
       failure : {

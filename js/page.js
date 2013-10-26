@@ -20,20 +20,24 @@ showPage : function(pagename) {
     
     if (pagename == 'SelectDrone') {
       var pickedDrone = CLOUDRONE.pickedDrone;
-      var state = CLOUDRONE.drones[pickedDrone].state;
       
-      if (state == CLOUDRONE.STATES['TaskCompleted']) {
-	WORKER_COMM.doSetState({
-	  state : {
-	    id : pickedDrone,
-	    state : state
+      if (pickedDrone != -1) {
+	var state = CLOUDRONE.drones[pickedDrone].state;
+      
+	if (state == CLOUDRONE.STATES['TaskCompleted']) {
+	  WORKER_COMM.doSetState({
+	    state : {
+	      id : pickedDrone,
+	      state : state
+	    },
+	    nstate : CLOUDRONE.STATES['Selected']
 	  },
-	  nstate : CLOUDRONE.STATES['Selected'],
-	  CLOUDRONE.template.selected
-	});
-      }
+	  CLOUDRONE.templates.drone_user_free
+	  );
+	}
       
-      $('input:radio[name="showDrones"]').attr('checked', true);
+	$('input:radio[name="showDrones"]').attr('checked', true);
+      }
     }
     
     this.currentPage = pagename;
