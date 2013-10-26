@@ -5,7 +5,7 @@ var WORKER_COMM = {
   rosport : 9090,
   mjpegport : 8081,
   
-  initRos: function(routes) {   
+  initRos: function(routes) {
     this.roshostname = routes.roshostname || this.roshostname;
     this.rosport = routes.rosport || this.rosport;
     this.mjpeghostname = routes.mjpeghostname || this.mjpeghostname;
@@ -14,7 +14,7 @@ var WORKER_COMM = {
     this.ros = new ROSLIB.Ros({
       url : 'ws://' + this.roshostname + ':' + this.rosport
     });
- },
+  },
   
   initService : function(initParams) {
     var client = new ROSLIB.Service(initParams.serviceObject);
@@ -48,6 +48,13 @@ var WORKER_COMM = {
       case 'task_start_success' :
 	CLOUDRONE.setState(response.state.id, CLOUDRONE.STATES['WaitNavdata']); // first wait for navdata, then send commands
 	this.initMonitoring(CLOUDRONE.pickedDrone);
+	break;
+	
+      case 'drone_user_free_success' :
+	CLOUDRONE.doShowDrones({
+	  policy : CLOUDRONE.SHOWPOLICY.SHOW_ALL,
+	},
+	CLOUDRONE.templates.drone_show);
 	break;
     };
     

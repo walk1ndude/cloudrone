@@ -1,30 +1,33 @@
 var PAGE = { 
   pages : {},
-  currentPage : '',
+  cpage : '',
   
-showPage : function(pagename) { 
-    if (!!this.currentPage) {
-      this.pages[this.currentPage].header.hide();
-      this.pages[this.currentPage].content.hide();
+  showPage : function(npage) {
+    var cpage
+  
+    if (!!this.cpage) {
+      this.pages[this.cpage].header.hide();
+      this.pages[this.cpage].content.hide();
     }
     
-    this.pages[pagename].header.show();
-    this.pages[pagename].content.show();
+    this.pages[npage].header.show();
+    this.pages[npage].content.show();
     
-    if (pagename == 'FlightTask' || pagename == 'Monitoring' || pagename == 'Result') {
+    if (npage == 'FlightTask' || npage == 'Monitoring' || npage == 'Result') {
       $('#droneStateControl').show();
     }
     else {
       $('#droneStateControl').hide();
     }
     
-    if (pagename == 'SelectDrone') {
+    if (npage == 'SelectDrone') {
       var pickedDrone = CLOUDRONE.pickedDrone;
       
       if (pickedDrone != -1) {
 	var state = CLOUDRONE.drones[pickedDrone].state;
       
 	if (state == CLOUDRONE.STATES['TaskCompleted']) {
+	  
 	  WORKER_COMM.doSetState({
 	    state : {
 	      id : pickedDrone,
@@ -35,12 +38,12 @@ showPage : function(pagename) {
 	  CLOUDRONE.templates.drone_user_free
 	  );
 	}
-      
-	$('input:radio[name="showDrones"]').attr('checked', true);
+	
+	$('#elapsedTime').html('00:00:00');
       }
     }
     
-    this.currentPage = pagename;
+    this.cpage = npage;
   },
   
  setPages : function() {
