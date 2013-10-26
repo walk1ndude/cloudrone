@@ -9,7 +9,7 @@
 
 <script type="text/javascript" src="../3rdparty/ros/eventemitter2.min.js"></script>
 <script type="text/javascript" src="../3rdparty/ros/mjpegcanvas.min.js"></script>
-<script type="text/javascript" src="../3rdparty/ros/roslib.min.js"></script>
+<script type="text/javascript" src="../3rdparty/ros/roslib.js"></script>
 
 <script type="text/javascript" src="../3rdparty/leaflet/leaflet.js"></script>
 
@@ -47,13 +47,13 @@
 	</ul>
       </div>
     </div>
-  <div id="headerFlyTask" style="display:none">
+  <div id="headerFlightTask" style="display:none">
     <div class="droneHeaderLinks">
       <ul class="droneHeaderLinks">
-	<li id="lSelectDroneFlyTask"><a href="#">Выбор БИТС</a></li>::
-	<li id="lFlyTask"><a href="#"><b>Полетное задание</b></a></li>::
-	<li id="lMonitoringFlyTask"><a href="#">Мониторинг задания</a></li>::
-	<li id="lResultFlyTask"><a href="#">Результаты</a></li>
+	<li id="lSelectDroneFlightTask"><a href="#">Выбор БИТС</a></li>::
+	<li id="lFlightTask"><a href="#"><b>Полетное задание</b></a></li>::
+	<li id="lMonitoringFlightTask"><a href="#">Мониторинг задания</a></li>::
+	<li id="lResultFlightTask"><a href="#">Результаты</a></li>
       </ul>
       <table>
 	<tr>
@@ -61,7 +61,7 @@
 	    <h3>Полетное задание</h3>
 	  </td>
 	  <td>
-    <input type="file" id="flightTaskInput" accept="text/xml,application/xml" disabled />
+    <input type="file" id="bFlightTaskInput" accept="text/xml,application/xml" disabled />
   </td>
 	</tr>
       </table>
@@ -71,7 +71,7 @@
     <div class="droneHeaderLinks">
       <ul class="droneHeaderLinks">
 	<li id="lSelectDroneMonitoring"><a href="#">Выбор БИТС</a></li>::
-	<li id="lFlyTaskMonitoring"><a href="#">Полетное задание</a></li>::
+	<li id="lFlightTaskMonitoring"><a href="#">Полетное задание</a></li>::
 	<li id="lMonitoring"><a href="#"><b>Мониторинг задания</b></a></li>::
 	<li id="lResultMonitoring"><a href="#">Результаты</a></li>
       </ul>
@@ -82,7 +82,7 @@
     <div class="droneHeaderLinks">
       <ul class="droneHeaderLinks">
 	<li id="lSelectDroneResult"><a href="#">Выбор БИТС</a></li>::
-	<li id="lFlyTaskResult"><a href="#">Полетное задание</a></li>::
+	<li id="lFlightTaskResult"><a href="#">Полетное задание</a></li>::
 	<li id="lMonitoringResult"><a href="#">Мониторинг задания</a></li>::
 	<li id="lResult"><a href="#"><b>Результаты</b></a></li>
       </ul>
@@ -166,7 +166,7 @@
       <div class="clear">
       </div>
     </div>
-   <div id="contentFlyTask" style="display:none">
+   <div id="contentFlightTask" style="display:none">
       <div class="left">
 	<div id="taskMap">
 	</div>
@@ -261,7 +261,7 @@
 	<td>
 	  Время выполнения задания
 	  <div id="elapsedTime">
-	    0:0
+	    00:00:00
 	  </div>
 	</td>
       </tr>

@@ -104,13 +104,7 @@ var CLOUDRONE = {
       success : {
 	id : 'drone_pick_success',
 	maps : ['taskMap'],
-	pages : ['FlyTask'],
-	domElements : [
-	  {
-	    element : '#droneStateControl',
-	    method : 'show'
-	  }
-	]
+	pages : ['FlightTask'],
       },
       failure : {
 	id : 'drone_pick_failure',
@@ -118,53 +112,27 @@ var CLOUDRONE = {
       }
     },
     
-   drone_start : {
+    task_start : {
       success : {
-	id : 'drone_start_success',
+	id : 'task_start_success',
       },
       failure : {
-	id : 'drone_pick_failure',
-	alerts : ['Невозможно изменить статус БИТС']
+	id : 'task_start_failure',
+	alerts : ['Невозможно начать выполнение полетного задания']
       }
     },
-    
-   init_nodes : {
+   
+    task_complete : {
       success : {
-	id : 'init_nodes_success',
+	id : 'task_complete_success',
       },
       failure : {
-	id : 'init_nodes_failure',
-	alerts : ['Невозможно выполнить запуск новых нодов']
+	id : 'task_complete_failure',
+	alerts : ['Невозможно завершить полетное задание']
       }
-   },
-    
-    kill_nodes : {
-      success : {
-	id : 'kill_nodes_success',
-      },
-      failure : {
-	id : 'kill_nodes_failure',
-	alerts : ['Невозможно выгрузить ноды']
-      }
-    },
-    
-    get_info : {
-      success : {
-	id : 'get_info_success',
-      },
-      failure : {
-	id : 'get_info_failure',
-	alerts : ['Невозможно получить необходимую информацию']
-      }
-   }
+    }
   },
   
-  maps : {
-    'taskMap' : {},
-    'monitorMap' : {},
-    'resultMap' : {}
-  },
- 
   showDrones : function(response) {
     var drones = response.drones;
   
@@ -234,25 +202,39 @@ var CLOUDRONE = {
       
       $('#markers').html(info);
     }
-    /**/
    
     this.pickedDrone = id;
+    var state = CLOUDRONE.drones[id].state;
     
-    WORKER_COMM.doSetState({
-	state : {
-	  id : id,
-	  state : CLOUDRONE.drones[id].state
+    switch(state) {
+      case CLOUDRONE.STATES['Free'] :
+	WORKER_COMM.doSetState({
+	  state : {
+	    id : id,
+	    state : CLOUDRONE.drones[id].state
+	  },
+	  nstate : CLOUDRONE.STATES['Selected']
 	},
-	newstate : CLOUDRONE.STATES['Selected']
-      },
-      CLOUDRONE.templates.drone_pick);
-    
+	CLOUDRONE.templates.drone_pick);
+	break;
+      case CLOUDRONE.STATES['Selected'] :
+	PAGE.showPage('FlightTask');
+	CLOUDRONE.setButtons({
+	  toEnable : ['#bFlightTaskInput']
+	});
+	break;
+      case CLOUDRONE.STATES['OnTask'] :
+	PAGE.showPage('Monitoring');
+	break;
+    }
   },
   
-  setState : function(id, sstate) {
-    CLOUDRONE.drones[id].state = sstate;
-    
-    if (sstate == this.STATES['TaskCompleted']) {
+  getState : function(id) {
+    return CLOUDRONE.drones[id].state;
+  },
+  
+  setState : function(id, nstate) {
+    if (nstate == CLOUDRONE.STATES['TaskCompleted']) {
       PAGE.showPage('Result');
       $('#droneState').html(CLOUDRONE.WRITESTATES['OnComplete']);
       CLOUDRONE.stopTheClocks(CLOUDRONE.clocks);
@@ -260,11 +242,34 @@ var CLOUDRONE = {
 	toEnable : ['#bStart'],
 	toDisable : ['#bStop']
       });
+
+      if(CLOUDRONE.drones[id].name=='TestDroneDist')  
+	$('#distInfo').load('dist/TestDroneDist.html');
+      
+      if(CLOUDRONE.drones[id].name=='TestDroneMaxDist')  
+	$('#distInfo').load('dist/TestDroneMaxDist.html');
+       
+      if(CLOUDRONE.drones[id].name=='TestDroneMinDist')  
+	$('#distInfo').load('dist/TestDroneMinDist.html');
+       
+      if(CLOUDRONE.drones[id].name=='TestDroneDist2')  
+	$('#distInfo').load('dist/TestDroneDist2.html');
     }
+    else if (nstate == CLOUDRONE.STATES['OnTask']) {
+      CLOUDRONE.initFlightCommands(CLOUDRONE.pickedDrone);
+    }
+    
+    CLOUDRONE.setUser(id, CLOUDRONE.drones[id].state, nstate);
+    CLOUDRONE.drones[id].state = nstate;
   },
   
-  getState : function(id) {
-    return CLOUDRONE.drones[id].state;
+  setUser : function(id, cstate, nstate) {
+    if (cstate == CLOUDRONE.STATES['Free'] && nstate == CLOUDRONE.STATES['Selected']) {
+      CLOUDRONE.drones[id].user = localStorage.id;
+    }
+    else if (nstate == CLOUDRONE.STATES['Free']) {
+      CLOUDRONE.drones[id].user = '';
+    }
   },
  
   doSign : function() {
@@ -286,13 +291,13 @@ var CLOUDRONE = {
      },
       this.templates.reg);
   },
-
-  fetchMaps : function() { 
-    for (map in this.maps) {
-      this.maps[map] = L.map(map).setView([0, 0], 0);
-      L.tileLayer('../tiles/{z}/{y}/{x}.png', {maxZoom: 2,}).addTo(this.maps[map]);
-     this.maps[map].markers = [];
-    }
+  
+  fetchMaps : function(id) { 
+    
+     //CLOUDRONE.map.remove();
+     L.tileLayer('../tiles_/'+'qwe'+id+'/{z}/{x}/{y}.png', {maxZoom: 2,}).addTo(CLOUDRONE.map);
+     CLOUDRONE.map.markers = [];
+    
   },
 
   onClickStart : function() {
@@ -320,9 +325,10 @@ var CLOUDRONE = {
 	  id : pickedDrone,
 	  state : state
 	},
-	newstate : CLOUDRONE.STATES['OnTask']
+	nstate : CLOUDRONE.STATES['OnTask'],
+	driver : drone.driver
       },
-      CLOUDRONE.templates.drone_start);
+      CLOUDRONE.templates.task_start);
       
       CLOUDRONE.clocks = CLOUDRONE.startTheClocks(CLOUDRONE.timerClick, 1000);
      
@@ -330,6 +336,9 @@ var CLOUDRONE = {
     
     switch (state) {
       case CLOUDRONE.STATES['Selected'] :
+	onSelected();
+	break;
+      case CLOUDRONE.STATES['TaskCompleted'] :
 	onSelected();
 	break;
     };
@@ -349,9 +358,14 @@ var CLOUDRONE = {
 	toDisable : ['#bStop']
       });
      
-      WORKER_COMM.killNodes({
-	drone : drone
-      });
+      WORKER_COMM.doSetState({
+	state : {
+	  id : pickedDrone,
+	  state : state
+	},
+	nstate : CLOUDRONE.STATES['TaskCompleted'],
+      },
+      CLOUDRONE.templates.task_complete);
       
       $('#droneState').html(CLOUDRONE.WRITESTATES['OnComplete']);
       PAGE.showPage('Result');
@@ -384,7 +398,7 @@ var CLOUDRONE = {
     $('#elapsedTime').html( addLeadZero(hours) + ':'
 			  + addLeadZero(minutes) + ':'
 			  + addLeadZero(seconds));
-    /*
+    
     if(CLOUDRONE.drones[CLOUDRONE.pickedDrone].name=='TestDroneObj')
     {
     
@@ -402,7 +416,7 @@ var CLOUDRONE = {
       $('#markersInfo').append(info);
       }
     }
-    */
+    
   },
   
   startTheClocks : function(method, interval, params) {
@@ -454,9 +468,9 @@ var CLOUDRONE = {
     
     function sendCommands(flightPlan) {
 
-     for(i in CLOUDRONE.maps.taskMap._layers) {
-         if(CLOUDRONE.maps.taskMap._layers[i]._path != undefined) {
-	    CLOUDRONE.maps.taskMap.removeLayer(CLOUDRONE.maps.taskMap._layers[i]);
+     for(i in CLOUDRONE.map._layers) {
+         if(CLOUDRONE.map._layers[i]._path != undefined) {
+	    CLOUDRONE.map.removeLayer(CLOUDRONE.maps.taskMap._layers[i]);
 	 }
       }
 	
@@ -478,7 +492,7 @@ var CLOUDRONE = {
 		  while (numbers[j] > 360) numbers[j] -= 360.;
 		}
 		
-		CLOUDRONE.maps.taskMap.markers[markerId ++] = L.marker([numbers[1], numbers[2]]).addTo(CLOUDRONE.maps.taskMap);
+		CLOUDRONE.map.markers[markerId ++] = L.marker([numbers[1], numbers[2]]).addTo(CLOUDRONE.map);
 		//CLOUDRONE.maps.taskMap.markers[markerId ++] = L.marker([numbers[3]*CLOUDRONE.KOSTILEV, //numbers[4]*CLOUDRONE.KOSTILEV]).addTo(CLOUDRONE.maps.taskMap);
 	      }
 	      
@@ -489,7 +503,7 @@ var CLOUDRONE = {
     }
     
     function drawPolyline() {
-      var map = CLOUDRONE.maps.taskMap
+      var map = CLOUDRONE.map;
       var markers = [];
       
       for (var i = 0; i < map.markers.length; i++) {
@@ -503,11 +517,12 @@ var CLOUDRONE = {
     for (var i = 0, f; f = files[i]; i++) {
 
       var reader = new FileReader();
+      CLOUDRONE.map.markers = [];
       
       reader.onload = function(e) {
 	  var xml = e.target.result;
 	  sendCommands($(xml).find("flightPlan").text()); 
-	  drawPolyline();  
+	  drawPolyline();
 	  var objectList = $(xml).find("objectList").text();
       };
       reader.readAsBinaryString(f);
@@ -518,33 +533,5 @@ var CLOUDRONE = {
     });
     
     $('#droneState').html(CLOUDRONE.WRITESTATES['WaitLaunch']);
-  },
-  
-  //very old and untested code, maybe del ?
-  /*
-  addMarker : function(e) {
-    m = L.marker(e.latlng).addTo(maps['taskMap']);
-      this.markers[m['_leaflet_id']]={};
-      this.markers[m['_leaflet_id']].marker=m;
-      this.markers[m['_leaflet_id']].latlng=m['_latlng'];
-      this.markers[m['_leaflet_id']].checked='checked';
-      this.markers[m['_leaflet_id']].photo='../images/drones/no-available-image.png';
-      this.markers[m['_leaflet_id']].type='Тип';
-      this.markers[m['_leaflet_id']].info='Дополнительная информация';
-	$('#markerstable').append('<tr id="marker_id'+m['_leaflet_id']+'" onClick="markerselected('+m['_leaflet_id']+');"><td><input type="checkbox" '+markers[m['_leaflet_id']].checked+'></input></td><td><img src="'+markers[m['_leaflet_id']].photo+'" width="50px"></img></td><td>'+
-	markers[m['_leaflet_id']].type+'</td><td>'+markers[m['_leaflet_id']].info+'</td></tr>');
-   },
-   
-   markerSelected : function markerSelected(id) {
-      if (this.markers[this.selectedMarker]) {
-	$('#markerId'+ this.selectedMarker).css("background-color", "#FFFFFF");
-	CLOUDRONE.markers[CLOUDRONE.selectedMarker].marker.closePopup();
-    CLOUDRONE.markers[CLOUDRONE.selectedMarker].marker.togglePopup();
-   }
-   
-   $('#markerId'+id).css("background-color", "#DDDDDD");
-   CLOUDRONE.selectedMarker=id;
-   $('#delMarker').show();
-   CLOUDRONE.markers[CLOUDRONE.selectedMarker].marker.bindPopup("Выбран").openPopup();
-  }*/
-}  
+  }
+}

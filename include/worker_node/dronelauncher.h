@@ -13,10 +13,15 @@ public:
   explicit DroneLauncher(QObject * parent = 0);
   ~DroneLauncher();
   
-  void addDrone(const int & id, const QString & program);
+  bool startDrone(const int & id, const QString & program);
+  bool pauseDrone(const int & id);
+  bool resumeDrone(const int & id);
+  bool removeDrone(const int & id);
   
 private:
   QMap<int,Drone*>drones;
+  int findPlayPID(const int & parentPID);
+  bool launchProcess(const int & id, const int & signal);
   
 private slots:
   void removeDrone(Drone * drone);

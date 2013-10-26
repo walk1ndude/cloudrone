@@ -10,15 +10,40 @@ showPage : function(pagename) {
     
     this.pages[pagename].header.show();
     this.pages[pagename].content.show();
-  
+    
+    if (pagename == 'FlightTask' || pagename == 'Monitoring' || pagename == 'Result') {
+      $('#droneStateControl').show();
+    }
+    else {
+      $('#droneStateControl').hide();
+    }
+    
+    if (pagename == 'SelectDrone') {
+      var pickedDrone = CLOUDRONE.pickedDrone;
+      var state = CLOUDRONE.drones[pickedDrone].state;
+      
+      if (state == CLOUDRONE.STATES['TaskCompleted']) {
+	WORKER_COMM.doSetState({
+	  state : {
+	    id : pickedDrone,
+	    state : state
+	  },
+	  nstate : CLOUDRONE.STATES['Selected'],
+	  CLOUDRONE.template.selected
+	});
+      }
+      
+      $('input:radio[name="showDrones"]').attr('checked', true);
+    }
+    
     this.currentPage = pagename;
   },
   
  setPages : function() {
       
     (function() {
-      var header = ['Main', 'Main', 'Main', 'SelectDrone', 'FlyTask', 'Monitoring', 'Result'];
-      var content = ['Main', 'About', 'Register', 'SelectDrone', 'FlyTask', 'Monitoring', 'Result'];
+      var header = ['Main', 'Main', 'Main', 'SelectDrone', 'FlightTask', 'Monitoring', 'Result'];
+      var content = ['Main', 'About', 'Register', 'SelectDrone', 'FlightTask', 'Monitoring', 'Result'];
 
       for (var i in header) {
 	PAGE.pages[content[i]] = {
@@ -28,146 +53,132 @@ showPage : function(pagename) {
       }
     }());
     
-    var setVisibility = function(params) {
-      params.domElement.on('click', function(event) {
+    function setVisibility(params) {
+      
+      $(params.domElement).on('click', function(event) {
 	PAGE.showPage(params.page);
       
-	var hide = params.domHide;
-	if (hide) {
-	  params.domHide.hide();
+	var domHide = params.domHide;
+	for (var i = 0; i < ((domHide) ? domHide.length : 0); i ++) {
+	  $(domHide[i]).hide();
 	}
 	
-	var map = params.map;
-	if (map) {
-	  CLOUDRONE.maps[map].invalidateSize(false);
+	var domShow = params.domShow;
+	for (var i = 0; i < ((domShow) ? domShow.length : 0); i ++) {
+	  $(domShow[i]).show();
 	}
+	
+	CLOUDRONE.map.invalidateSize(false);
       
 	var flags = params.flags;
-	if (flags.showTable) {
-	  WORKER_COMM.doShowDrones({
-	    show : CLOUDRONE.SHOWPOLICY.SHOW_ALL
-	  },
-	  CLOUDRONE.templates.drone_show);
-	}
+	
+	if (flags) {
+	  if (flags.showDrones) {
+	    WORKER_COMM.doShowDrones({
+	      policy : CLOUDRONE.SHOWPOLICY.SHOW_ALL
+	    },
+	    CLOUDRONE.templates.drone_show);
+	  }
       
-	if (flags.showResults) {
-	  WORKER_COMM.initResults();
+	  if (flags.showResults) {
+	    WORKER_COMM.initResults();
+	  }
 	}
       });
     };
- 
-    setVisibility({
-     domElement : $('#lMain'),
-      page : 'Main'
-    });
     
-   setVisibility({
-     domElement : $('#lAbout'),
-      page : 'About'
-    });
-    
-   setVisibility({
-     domElement : $('#lRegister'),
-      page : 'Register'
-    });
-    
-   setVisibility({
-     domElement : $('#lSelectDroneMain'),
-      page : 'SelectDrone',
-      domHide : $('#droneStateControl'),
-      flags : {
-	showTable : true
+    var objects = [
+      {
+	domelement : '#lMain',
+	page : 'Main',
+	},
+      {
+	domElement : '#lAbout',
+	page : 'About',
+      },
+      {
+	domElement : '#lRegister',
+	page : 'Register',
+      },
+      {
+	domElement : '#lSelectDroneMain',
+	page : 'SelectDrone',
+	flags : {
+	  showDrones : true
+	}
+      },
+      {
+	domElement : '#lSelectDroneFlightTask',
+	page : 'SelectDrone',
+	flags : {
+	  showDrones : true
+	}
+      },
+      {
+	domElement : '#lFlightTask',
+	page : 'FlightTask',
+      },
+      {
+	domElement : '#lMonitoringFlightTask',
+	page : 'Monitoring',
+      },
+      {
+	domElement : '#lResultFlightTask',
+	page : 'Result',
+	flags : {
+	  showResults : true
+	}
+      },
+      {
+	domElement : '#lSelectDroneMonitoring',
+	page : 'SelectDrone',
+	flags : {
+	  showDrones : true
+	}
+      },
+      {
+	domElement : '#lFlightTaskMonitoring',
+	page : 'FlightTask',
+      },
+      {
+	domElement : '#lMonitoring',
+	page : 'Monitoring',
+      },
+      {
+	domElement : '#lResultMonitoring',
+	page : 'Result',
+	flags : {
+	  showResults : true
+	}
+      },
+      {
+	domElement : '#lSelectDroneResult',
+	page : 'SelectDrone',
+	flags : {
+	  showDrones : true
+	}
+      },
+      {
+	domElement : '#lFlightTaskResult',
+	page : 'FlightTask',
+      },
+      {
+	domElement : '#lMonitoringResult',
+	page : 'Monitoring',
+      },
+      {
+	domElement : '#lResult',
+	page : 'Result',
+	flags : {
+	  showResults : true
+	}
       }
-    });
+    ];
     
-   setVisibility({
-      domElement : $('#lSelectDroneFlyTask'),
-      page : 'SelectDrone',
-      domHide : $('#droneStateControl'),
-     flags : {
-	showTable : true
-      }
-    });
-    
-   setVisibility({
-      domElement : $('#lFlyTask'),
-      page : 'FlyTask',
-      map : 'taskMap'
-    });
-    
-  setVisibility({
-     domElement : $('#lMonitoringFlyTask'),
-      page : 'Monitoring',
-      map : 'monitorMap'
-    });
-    
-   setVisibility({
-      domElement : $('#lResultFlyTask'),
-      page : 'Result',
-      map : 'resultMap',
-     flags : {
-	showResults : true
-      }
-    });
-    
-   setVisibility({
-     domElement : $('#lSelectDroneMonitoring'),
-      page : 'SelectDrone',
-      domHide : $('#droneStateControl'),
-      flags : {
-	showTable : true
-      }
-    });
-    
-  setVisibility({
-      domElement : $('#lFlyTaskMonitoring'),
-      page : 'FlyTask'
-    });
-    
-    setVisibility({
-     domElement : $('#lMonitoring'),
-      page : 'Monitoring',
-      map : 'monitorMap'
-    });
-    
-   setVisibility({
-      domElement : $('#lResultMonitoring'),
-      page : 'Result',
-      map : 'resultMap',
-     flags : {
-	showResults : true
-      }
-    });
-
-   setVisibility({
-     domElement : $('#lSelectDroneResult'),
-      page : 'SelectDrone',
-      domHide : $('#droneStateControl'),
-      flags : {
-	showTable : true
-      }
-    });
-    
-   setVisibility({
-      domElement : $('#lFlyTaskResult'),
-      page : 'FlyTask'
-    });
-    
-   setVisibility({
-     domElement : $('#lMonitoringResult'),
-      page : 'Monitoring',
-      map : 'monitorMap'
-    });
-    
-   setVisibility({
-      domElement : $('#lResult'),
-      page : 'Result',
-      map : 'resultMap',
-     flags : {
-	showResults : true
-      }
-    });
-   
+    for (var i = 0; i < objects.length; i++) {
+      setVisibility(objects[i]);
+    }
+     
     (function() {
       $('input:radio[name="showDrones"]').change(function() {
 	if ($(this).val() == 'showDronesAll') {
@@ -199,20 +210,20 @@ showPage : function(pagename) {
     $('input:radio[name="showDrones"]').change(function() {
       if ($(this).val() == 'showDronesAll') {
 	WORKER_COMM.doShowDrones({
-	  show : CLOUDRONE.SHOWPARAMS.SHOW_ALL
+	  policy : CLOUDRONE.SHOWPOLICY.SHOW_ALL
 	},
 	CLOUDRONE.templates.drone_show);
       }
       else if ($(this).val() == 'showDronesUser') {
 	WORKER_COMM.doShowDrones({
-	  show : CLOUDRONE.SHOWPARAMS.SHOW_USER,
+	  policy : CLOUDRONE.SHOWPOLICY.SHOW_USER,
 	  user : localStorage.id
 	},
 	CLOUDRONE.templates.drone_show);
       }
       else if ($(this).val() == 'showDronesFree') {
 	WORKER_COMM.doShowDrones({
-	  show : CLOUDRONE.SHOWPARAMS.SHOW_FREE,
+	  policy : CLOUDRONE.SHOWPOLICY.SHOW_FREE,
 	},
 	CLOUDRONE.templates.drone_show);
       }

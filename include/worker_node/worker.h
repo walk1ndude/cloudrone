@@ -13,8 +13,7 @@
 
 #include <cloudrone/KillNodes.h>
 
-#include <worker_node/stateset.h>
-#include <worker_node/dronelauncher.h>
+#include "worker_node/stateset.h"
 
 //=====================TOPICS==================================//
 
@@ -58,20 +57,7 @@ typedef struct _dbstruct {
   std::string password;
 }dbstruct;
 
-//=========================ERROR CODES=========================//
-
-#define EVERYTHINGS_FINE 0
-#define ERROR_DB_NOT_CONNECTED 1
-#define ERROR_USER_ALREADY_REGISTERED 2
-#define ERROR_CANT_REGISTER_USER 3
-#define ERROR_NO_SUCH_USER 4
-#define ERROR_CANT_SIGN_USER 5
-#define ERROR_CANT_SHOW_DRONES 6
-#define ERROR_CANT_SET_STATE 7
-#define ERROR_CANT_WRITE_LAUNCH_FILE 8
-#define ERROR_CANT_LAUNCH_NODES 9
-
-//=============================================================//
+//============================================================//
 
 class Worker : public QObject {
   
@@ -90,8 +76,6 @@ private:
   QSqlDatabase db;
   
   StateSet * stateSet;
-  
-  DroneLauncher * droneLauncher;
    
   ros::ServiceServer registerService;
   ros::ServiceServer signService;
@@ -100,16 +84,16 @@ private:
   ros::ServiceServer setStateService;
   ros::ServiceServer killNodesService;
   
-  ros::Publisher taskCompletedPublisher;
-   
-  template <class ResponseT> bool respond(ResponseT & res, int error);
+  ros::Publisher stateChangePublisher;
+  
+  template <class ResponseT> bool respond(ResponseT & res, const int & error);
   template <class ResponseT> bool checkDB(ResponseT & res);
   
   void setDefaults();
   void fetchServices();
   void fetchPublishers();
-  void fetchDroneLauncher();
   void fetchStateSet();
+  void fetchSignals();
   bool fetchDatabase();
   
   void closeDatabase();
@@ -117,17 +101,18 @@ private:
   bool registerUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response & res);
   bool signUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response & res);
   
-  QString getDriver(int id);
   bool getMarkers(cloudrone::GetMarkers::Request & req, cloudrone::GetMarkers::Response & res);
   bool getDrones(cloudrone::GetDrones::Request & req, cloudrone::GetDrones::Response & res);
   
   bool setState(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res);
   
-  template <class ResponseT> bool finishTaskByID(int id, ResponseT & res);
-  template <class ResponseT> bool startTaskByID(int id, ResponseT & res);
+  void notifyStateChanged(const int & id, const int & nstate);
   
-  bool killNodes(cloudrone::KillNodes::Request & req, cloudrone::KillNodes::Response & res);
-
+  bool ownDrone(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res);
+  bool disownDrone(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res);
+  
 private slots:
-  void notifyCompletedID(const int & id);
+  void notifyTaskCompleted(const int & id);
+  void notifyTaskPaused(const int & id);
+  void notifyTaskResumed(const int & id);
 };

@@ -17,14 +17,14 @@ $(document).ready(function() {
       }
   }, CLOUDRONE.templates.sign);
 
-  CLOUDRONE.fetchMaps();
+  CLOUDRONE.map = L.map('taskMap').setView([0, 0], 0);
   
- /* 
-  $("window").unload(
-    CLOUDRONE.doKillNodes({
-      user : localStorage.id
-    })
-  );
- */ 
-  document.getElementById('flightTaskInput').addEventListener('change', CLOUDRONE.loadFlightTask, false);
+  $("window").bind("unload", function(eventObject) {
+      alert('here');
+      return true;
+    });
+  
+  $('#bFlightTaskInput').change(function(eventObject) {
+    CLOUDRONE.loadFlightTask(eventObject);
+  });
 })

@@ -13,7 +13,6 @@
 
 #include "worker_node/worker.h"
 #include <cloudrone/User.h>
-#include <sstream>
 
 Worker::Worker(QObject * parent) :
   QObject(parent),
@@ -24,8 +23,8 @@ Worker::Worker(QObject * parent) :
   if (fetchDatabase()) {
     fetchServices();
     fetchPublishers();
-    fetchDroneLauncher();
     fetchStateSet();
+    fetchSignals();
   }
 }
 
@@ -56,7 +55,7 @@ void Worker::closeDatabase() {
 }
 
 void Worker::fetchPublishers() {
-  taskCompletedPublisher = nh.advertise<cloudrone::State>(TOPIC_GET_STATE, 1);
+  stateChangePublisher = nh.advertise<cloudrone::State>(TOPIC_GET_STATE, 1);
 }
 
 void Worker::fetchServices() {
@@ -68,59 +67,64 @@ void Worker::fetchServices() {
 
   setStateService = nh.advertiseService(TOPIC_SET_STATE, &Worker::setState, this);
 
-  killNodesService = nh.advertiseService(TOPIC_KILL_NODES, &Worker::killNodes, this);
+  //killNodesService = nh.advertiseService(TOPIC_KILL_NODES, &Worker::killNodes, this);
 }
 
-template <class ResponseT> bool Worker::respond(ResponseT & res, int error) {
+void Worker::fetchSignals() {
+  QObject::connect(stateSet->getDroneLauncher(), &DroneLauncher::signalTaskCompleted,
+		   this, &Worker::notifyTaskCompleted, Qt::DirectConnection);
+}
+
+void Worker::fetchStateSet() {
+  stateSet = new StateSet(this);
+  
+  QSqlQuery query("SELECT * FROM state_set;");
+  
+  while (query.next()) {
+    stateSet->addRule(query.value(0).toInt(),query.value(1).toInt());
+  }
+}
+
+template <class ResponseT> bool Worker::respond(ResponseT & res, const int & error) {
   res.error = error;
   return true;
-};
+}
 
 template <class ResponseT> bool Worker::checkDB(ResponseT & res) {
   if (!db.open()) {
     respond(res, ERROR_DB_NOT_CONNECTED);
   }
-};
-
-void Worker::fetchDroneLauncher() {
-  droneLauncher = new DroneLauncher(this);
-  QObject::connect(droneLauncher, &DroneLauncher::signalTaskCompleted, this, &Worker::notifyCompletedID, Qt::DirectConnection);
-}
-
-void Worker::fetchStateSet() {
-  stateSet = new StateSet(this);
-  stateSet->fetchRules();
 }
 
 bool Worker::registerUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response & res) {
   
   if (checkDB(res)) {
-    return false;
+    return true;
   }
   
   QSqlQuery query;
-  query.prepare("SELECT * FROM users WHERE id=:id");
+  query.prepare("SELECT * FROM users WHERE id=:id;");
   query.bindValue(":id", QString::fromStdString(req.user.id));
   
   if (!query.exec() || query.size()) {
     return respond(res, ERROR_USER_ALREADY_REGISTERED);
   }
   
-  query.prepare("INSERT INTO users(id, password) VALUES(:id, md5(:password))");
+  query.prepare("INSERT INTO users(id, password) VALUES(:id, md5(:password));");
   query.bindValue(":id", QString::fromStdString(req.user.id));
   query.bindValue(":password", QString::fromStdString(req.user.password));
   
   if (!query.exec()) {
     return respond(res, ERROR_CANT_REGISTER_USER); 
   }
-  
+
   return respond(res, EVERYTHINGS_FINE);
 }
 
 bool Worker::signUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response & res) {
   
   if (checkDB(res)) {
-    return false;
+    return true;
   }
   
   QSqlQuery query;
@@ -155,7 +159,7 @@ bool Worker::getMarkers(cloudrone::GetMarkers::Request & req, cloudrone::GetMark
 bool Worker::getDrones(cloudrone::GetDrones::Request & req, cloudrone::GetDrones::Response & res) {
   
   if (checkDB(res)) {
-    return false;
+    return true;
   }
   
   QSqlQuery query;
@@ -204,126 +208,89 @@ bool Worker::getDrones(cloudrone::GetDrones::Request & req, cloudrone::GetDrones
 bool Worker::setState(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res) {
   
   if (checkDB(res)) {
-    return false;
+    return true;
   }
   
-  QSqlQuery query;
-  res.state = req.state;
-  
-  if (stateSet->isApplicable(req.state.state, req.newstate)) {
+  if (stateSet->setState(req, res)) {
+    QSqlQuery query;
     
     query.prepare("UPDATE drones SET state=:nstate WHERE id=:id;");
     query.bindValue(":id", req.state.id);
-    query.bindValue(":nstate", req.newstate);
+    query.bindValue(":nstate", req.nstate);
     
-    res.state.state = req.newstate;
-  
-    if (!query.exec()) {
-      return respond(res, ERROR_CANT_SET_STATE);
+    query.exec();
+    
+    int cstate = req.state.state;
+    int nstate = req.nstate;
+    
+    if (cstate == STATE_FREE && nstate == STATE_SELECTED) {
+      return ownDrone(req, res);
     }
     
-    if (req.state.state == STATE_SELECTED && req.newstate == STATE_ONTASK) {
-      return startTaskByID(req.state.id, res);
+    if (nstate == STATE_FREE) {
+      return disownDrone(req, res);
     }
-    else if (req.state.state == STATE_ONTASK && (req.newstate == STATE_FREE || req.newstate == STATE_SELECTED)) {
-      return finishTaskByID(req.state.id, res);
-    }
-    
-    return respond(res, EVERYTHINGS_FINE);
   }
-
-  else {
-    return respond(res, ERROR_CANT_SET_STATE);
-  }
-
-}
-
-QString Worker::getDriver(int id) {
   
-  QSqlQuery query;
-  
-  query.prepare("SELECT driver FROM drones WHERE id=:id");
-  query.bindValue(":id", id);
-  query.exec();
-  query.next();
-  
-  std::cout << query.value(0).toString().toStdString() << std::endl;
-  
-  return query.value(0).toString();
-}
-
-template <class ResponseT> bool Worker::finishTaskByID(int id, ResponseT & res) {
-  /*
-  QProcess * procToKill = drones.find(id).value();
-  procToKill->kill();
-  
-  procToKill->waitForFinished();
-  
-  //free resources
-  delete procToKill;
-  drones.remove(id);
- */
   return respond(res, EVERYTHINGS_FINE);
 }
 
-template <class ResponseT> bool Worker::startTaskByID(int id, ResponseT & res) {
+bool Worker::ownDrone(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res) {
   
-  QString fileName = QDir::homePath() + "/.ros/drone" + QString::number(id) + ".launch";
-  QFile file(fileName);
-  
-  // generate launch file
-  
-  if (file.open(QIODevice::WriteOnly)) {
-    QTextStream stream(&file);
-    
-    QString drone = "drone" + QString::number(id);
-    QString launchDriver;
-    
-    QString driver = getDriver(id);
-    
-    if (driver == ARDRONE_DRIVER) {
-      launchDriver = "<node pkg=\"ardrone_autonomy\" type=\"" + driver
-      + "\" name=\"ardrone_driver\" args=\"_navdata_demo:=0 _loop_rate:=200\" />";
-    }
-    else {
-      launchDriver = "<node pkg=\"rosbag\" type=\"play\" name=\"player\" args = \"" + driver + "\" required=\"true\"/>";
-    };
-    
-    //AS OF GROOVY (HYDRO): NEED TO REMAP EACH TOPIC MANUALLY!!!
-    // TO DO: add all nodes and remaps to db
-      
-    stream << "<launch>" << endl
-    << "<group ns=\"" + drone + "\">" << endl
-    << "<remap from=\"/ardrone/image_raw\" to=\"/" + drone + "/ardrone/image_raw\" />" << endl
-    << "<remap from=\"/ardrone/navdata\" to=\"/" + drone + "/ardrone/navdata\" />" << endl
-    << "<remap from=\"/cloudrone/image_raw\" to=\"/" + drone + "/cloudrone/image_raw\" />" << endl
-    << launchDriver << endl
-    << "<node pkg=\"cloudrone\" type=\"marker_detection_node\" name=\"marker_detection_node\" />" << endl
-    << "<node pkg=\"tum_ardrone\" type=\"drone_stateestimation\" name=\"drone_stateestimation\" />" << endl
-    << "<node pkg=\"tum_ardrone\" type=\"drone_autopilot\" name=\"drone_autopilot\" />" << endl
-    << "</group>" << endl
-    << "</launch>" << endl;
-    
-    file.close();
-    
-    droneLauncher->addDrone(id, "roslaunch " + fileName);
-   
-    return respond(res, EVERYTHINGS_FINE);
+  if (checkDB(res)) {
+    return true;
   }
-  else {
-    return respond(res, ERROR_CANT_WRITE_LAUNCH_FILE);
-  }
-}
-
-void Worker::notifyCompletedID(const int & id) {
-  cloudrone::State state;
-  state.id = id;
-  state.state = STATE_TASKCOMPLETED;
   
-  taskCompletedPublisher.publish(state);
+  QSqlQuery query;
+  query.prepare("INSERT INTO drone_ownership VALUES(:user,:drone);");
+  query.bindValue(":user", QString::fromStdString(req.user));
+  query.bindValue(":drone", req.state.id);
+  
+  query.exec();
+  
+  return respond(res, EVERYTHINGS_FINE);
 }
 
-
-bool Worker::killNodes (cloudrone::KillNodes::Request& req, cloudrone::KillNodes::Response& res) {
-
+bool Worker::disownDrone(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res) {
+  
+  if (checkDB(res)) {
+    return true;
+  }
+  
+  QSqlQuery query;
+  query.prepare("DELETE FROM drone_ownership WHERE user=:user AND drone=:drone");
+  query.bindValue(":user", QString::fromStdString(req.user));
+  query.bindValue(":drone", req.state.id);
+  
+  query.exec();
+  
+  return respond(res, EVERYTHINGS_FINE);
 }
+
+void Worker::notifyStateChanged(const int & id, const int & nstate) {
+  cloudrone::State newstate;
+  newstate.id = id;
+  newstate.state = nstate;
+  
+  QSqlQuery query;
+  query.prepare("UPDATE drones SET state=:nstate WHERE id=:id;");
+  query.bindValue(":nstate", nstate);
+  query.bindValue(":id", id);
+  
+  query.exec();
+  
+  stateChangePublisher.publish(newstate);
+}
+
+void Worker::notifyTaskCompleted(const int & id) {
+  notifyStateChanged(id, STATE_TASKCOMPLETED);
+}
+
+void Worker::notifyTaskPaused(const int & id) {
+  notifyStateChanged(id, STATE_TASKPAUSED);
+}
+
+void Worker::notifyTaskResumed(const int & id) {
+  notifyStateChanged(id, STATE_ONTASK);
+}
+

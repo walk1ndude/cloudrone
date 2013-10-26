@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 2.8.9)
 project(cloudrone)
 
 find_package(catkin REQUIRED roscpp message_generation sensor_msgs image_transport cv_bridge)
@@ -9,6 +9,7 @@ find_package(Qt5Sql)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_BUILD_TYPE RelWithDebugInfo)
 
+SET(CMAKE_CXX_FLAGS "-std=c++0x -fPIC")
 
 add_service_files(DIRECTORY srv)
 add_message_files(DIRECTORY msg)

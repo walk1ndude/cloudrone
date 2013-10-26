@@ -3,8 +3,8 @@ var WORKER_COMM = {
   roshostname : 'localhost',
   mjpeghostname : 'localhost',
   rosport : 9090,
- mjpegport : 8081,
-    
+  mjpegport : 8081,
+  
   initRos: function(routes) {   
     this.roshostname = routes.roshostname || this.roshostname;
     this.rosport = routes.rosport || this.rosport;
@@ -21,17 +21,18 @@ var WORKER_COMM = {
     
     client.callService(new ROSLIB.ServiceRequest(initParams.requestObject),
       function(response) {
-if (!response.error) { // 'cause 0 is a success
-  WORKER_COMM.serviceResponse(response, initParams.responseSuccess);
+	if (!response.error) { // 'cause 0 is a success
+	  WORKER_COMM.serviceResponse(response, initParams.responseSuccess);
 	}
 	else {
 	  WORKER_COMM.serviceResponse(response, initParams.responseFailure);
 	}
-      });
+      }
+    );
   },
   
   serviceResponse : function(response, template) {
-   switch (template.id) {
+    switch (template.id) {
       case 'drone_show_success' :
 	CLOUDRONE.unselectDrone();
 	CLOUDRONE.showDrones(response);
@@ -39,26 +40,25 @@ if (!response.error) { // 'cause 0 is a success
 	
       case 'drone_pick_success' :
 	CLOUDRONE.setState(response.state.id, response.state.state);
-	$('#flightTaskInput').removeAttr('disabled');
+	CLOUDRONE.setButtons({
+	  toEnable : ['#bFligthTaskInput'],
+	});
 	break;
 	
-      case 'drone_start_success' :
+      case 'task_start_success' :
 	CLOUDRONE.setState(response.state.id, CLOUDRONE.STATES['WaitNavdata']); // first wait for navdata, then send commands
 	this.initMonitoring(CLOUDRONE.pickedDrone);
 	break;
     };
-   var pages = template.pages;
+    
+    var pages = template.pages;
     
     for (var id = 0; id < ((pages) ? pages.length : 0) ; id ++) {
       PAGE.showPage(pages[id]);
     }
   
-    var maps = template.maps;
-	
-    for (var id = 0; id < ((maps) ? maps.length : 0) ; id ++) {
-      CLOUDRONE.maps[maps[id]].invalidateSize(false);
-    }
-    
+    CLOUDRONE.map.invalidateSize(false);
+
     var domElements = template.domElements;
     
     for (var id = 0; id < ((domElements) ? domElements.length : 0) ; id ++) {
@@ -104,9 +104,7 @@ if (!response.error) { // 'cause 0 is a success
 	name : '/cloudrone/reg',
 	serviceType : 'cloudrone/Auth'
       },
-      requestObject : {
-	  user : input.user
-     },
+      requestObject : input,
       responseSuccess : template.success,
       responseFailure : template.failure
     });
@@ -122,7 +120,7 @@ if (!response.error) { // 'cause 0 is a success
 	serviceType : 'cloudrone/GetDrones'
       },
       requestObject : {
-	policy : input.show,
+	policy : input.policy,
 	user : input.user || localStorage.id
       },
       responseSuccess : template.success,
@@ -137,10 +135,7 @@ if (!response.error) { // 'cause 0 is a success
 	name : '/cloudrone/set_state',
 	messageType : 'cloudrone/SetState'
       },
-      requestObject : {
-	state : input.state,
-	newstate : input.newstate
-     },
+      requestObject : input,
       responseSuccess : template.success,
       responseFailure : template.failure
     });
@@ -200,25 +195,23 @@ if (!response.error) { // 'cause 0 is a success
     });
     
     this.navdataListener.subscribe(function(message) {
-        
-	CLOUDRONE.emptyNavdataInfo();
-	pickedDrone = CLOUDRONE.pickedDrone;
-	
-	if (CLOUDRONE.drones[pickedDrone].state == 'WaitNavdata') {
-	  CLOUDRONE.initFlightCommands(pickedDrone);
-	  CLOUDRONE.setState(pickedDrone, 'OnTask'); // Begin task
-	}
-	
-        var data = navdata.data;
-        var value;
-        var isValueObject;
-        
-        for(var key in data) {
-          isValueObject = data[key] instanceof Object;
-          value = (isValueObject) ? data[key].states[message[key]] : message[key];
-          CLOUDRONE.printNavdataInfo(((isValueObject) ? data[key].name : data[key]), value);
-        }
-        
+      CLOUDRONE.emptyNavdataInfo();
+      pickedDrone = CLOUDRONE.pickedDrone;
+      
+      if (CLOUDRONE.drones[pickedDrone].state === CLOUDRONE.STATES['WaitNavdata']) {
+	console.log('all green');
+	CLOUDRONE.setState(pickedDrone, 'OnTask'); // Begin task
+      }
+      
+      var data = navdata.data;
+      var value;
+      var isValueObject;
+      
+      for(var key in data) {
+	isValueObject = data[key] instanceof Object;
+	value = (isValueObject) ? data[key].states[message[key]] : message[key];
+	CLOUDRONE.printNavdataInfo(((isValueObject) ? data[key].name : data[key]), value);
+      }
     });
     
     var video = model.video;
