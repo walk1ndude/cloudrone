@@ -168,15 +168,15 @@ bool Worker::getDrones(cloudrone::GetDrones::Request & req, cloudrone::GetDrones
   switch (req.policy) {
     
     case SHOW_ALL :
-      query.prepare("SELECT * FROM show_all;");
+      query.prepare("SELECT * FROM show_all ORDER BY (id);");
       break;
       
     case SHOW_FREE :
-      query.prepare("SELECT * FROM show_all WHERE state=" + QString::number(STATE_FREE) + ";");
+      query.prepare("SELECT * FROM show_all WHERE state=" + QString::number(STATE_FREE) + " ORDER BY (id);");
       break;
      
     case SHOW_USER :
-      query.prepare("SELECT * FROM show_all WHERE user=:user");
+      query.prepare("SELECT * FROM show_all WHERE user=:user ORDER BY (id);");
       query.bindValue(":user", QString::fromStdString(req.user));
       break;
   }
@@ -221,7 +221,14 @@ bool Worker::setState(cloudrone::SetState::Request & req, cloudrone::SetState::R
   query.exec();
   query.next();
   
-  QString task = query.value(0).toString();
+  QString task;
+  
+  try {
+    task = query.value(0).toString();
+  }
+  catch (...) {
+    task = "";
+  }
   
   if (stateSet->setState(req, task, res)) {
     
@@ -273,7 +280,7 @@ bool Worker::disownDrone(cloudrone::SetState::Request & req, cloudrone::SetState
   query.prepare("DELETE FROM drone_ownership WHERE user=:user AND drone=:drone");
   query.bindValue(":user", QString::fromStdString(req.user));
   query.bindValue(":drone", req.state.id);
-  
+ 
   query.exec();
   
   return respond(res, EVERYTHINGS_FINE);

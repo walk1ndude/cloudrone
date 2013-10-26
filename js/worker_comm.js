@@ -217,7 +217,6 @@ var WORKER_COMM = {
       pickedDrone = CLOUDRONE.pickedDrone;
       
       if (CLOUDRONE.drones[pickedDrone].state === CLOUDRONE.STATES['WaitNavdata']) {
-        console.log('all green');
         CLOUDRONE.setState(pickedDrone, 'OnTask'); // Begin task
       }
       
