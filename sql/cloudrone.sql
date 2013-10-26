@@ -69,7 +69,7 @@ CREATE TABLE `drones` (
 
 LOCK TABLES `drones` WRITE;
 /*!40000 ALTER TABLE `drones` DISABLE KEYS */;
-INSERT INTO `drones` VALUES (0,'TestDroneDist','ardrone2','RSATU',1,'/home/walkindude/catkin_ws/record/flight_2013-10-19-14-40-12.bag',''),(1,'TestDroneObj','ardrone2','ISA',1,'/home/walkindude/catkin_ws/record/flight1_2013-10-19-14-40-12.bag','');
+INSERT INTO `drones` VALUES (0,'TestDroneDist','ardrone2','RSATU',1,'/home/walkindude/catkin_ws/record/flight_2013-10-19-14-40-12.bag',''),(1,'TestDroneObj','ardrone2','ISA',1,'/home/walkindude/catkin_ws/record/flight1_2013-10-19-14-40-12.bag',''),(2,'TestDroneObjMinDist','ardrone2','RSATU',0,'/home/ardrone/f3/TestDroneMinDist.bag',''),(3,'TestDroneObjMaxDist','ardrone2','RSATU',0,'/home/ardrone/f3/TestDroneMaxDist.bag',''),(4,'TestDroneDist2','ardrone2','RSATU',0,'/home/ardrone/f3/TestDroneDist2.bag','');
 /*!40000 ALTER TABLE `drones` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -103,6 +103,7 @@ DROP TABLE IF EXISTS `state_set`;
 CREATE TABLE `state_set` (
   `cstate` int(11) NOT NULL,
   `nstate` int(11) NOT NULL,
+  `task` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`cstate`,`nstate`),
   KEY `nstate` (`nstate`),
   CONSTRAINT `state_set_ibfk_1` FOREIGN KEY (`cstate`) REFERENCES `states` (`id`),
@@ -116,7 +117,7 @@ CREATE TABLE `state_set` (
 
 LOCK TABLES `state_set` WRITE;
 /*!40000 ALTER TABLE `state_set` DISABLE KEYS */;
-INSERT INTO `state_set` VALUES (0,1),(1,0),(1,2),(2,0),(2,3),(3,0),(3,1);
+INSERT INTO `state_set` VALUES (0,1,NULL),(1,0,NULL),(1,2,'start'),(2,0,NULL),(2,3,'finish'),(3,0,NULL),(3,1,NULL),(3,2,'start');
 /*!40000 ALTER TABLE `state_set` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -231,4 +232,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-10-26 16:28:45
+-- Dump completed on 2013-10-26 20:09:42
