@@ -43,7 +43,7 @@ public:
   bool addRule(const int & cstate, const int & nstate);
   DroneLauncher * getDroneLauncher();
 
-  bool setState(const cloudrone::SetState::Request & req, cloudrone::SetState::Response & res);
+  bool setState(const cloudrone::SetState::Request & req, const QString & task, cloudrone::SetState::Response & res);
 
 private:
   QMultiMap<int,int>rules;

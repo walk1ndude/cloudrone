@@ -34,7 +34,7 @@ bool StateSet::respond(cloudrone::SetState::Response & res, const int & error) {
   return true;
 };
 
-bool StateSet::setState(const cloudrone::SetState::Request & req, cloudrone::SetState::Response & res) {
+bool StateSet::setState(const cloudrone::SetState::Request & req, const QString & task, cloudrone::SetState::Response & res) {
   int cstate = req.state.state;
   int nstate = req.nstate;
   
@@ -44,10 +44,10 @@ bool StateSet::setState(const cloudrone::SetState::Request & req, cloudrone::Set
     
     res.state.state = nstate;
     
-    if ((cstate == STATE_SELECTED && nstate == STATE_ONTASK)) {
+    if (task == "start") {
       return startTaskByID(req.state.id, QString::fromStdString(req.driver), res);
     }
-    else if ((cstate == STATE_ONTASK && nstate == STATE_TASKCOMPLETED)) {
+    if (task == "finish") {
       return finishTaskByID(req.state.id, res);
     }
     

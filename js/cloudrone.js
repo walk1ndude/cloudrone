@@ -128,6 +128,16 @@ var CLOUDRONE = {
 	alerts : ['Невозможно начать выполнение полетного задания']
       }
     },
+    
+    task_stop : {
+      success : {
+	id : 'task_stop_success',
+      },
+      failure : {
+	id : 'task_stop_failure',
+	alerts : ['Невозможно освободить БИТС']
+      }
+    },
    
     task_complete : {
       success : {
@@ -165,13 +175,24 @@ var CLOUDRONE = {
 	+ (isFree ? 'Свободен' : 'Занят') + '</td><td align="center"><button onClick="CLOUDRONE.pickDrone('
 	+ id + ');" ' + ((isOwned || isFree) ? '' : 'disabled')
 	+ '>Выбрать</button></td><td align="center"><button onClick="CLOUDRONE.stopTask('
-	+ id + ');" ' + ((isOwned && isOnTask) ? '' : 'disabled')
-	+ '>Остановить</button></td></tr>');
+	+ id + ');" ' + ((isOwned) ? '' : 'disabled')
+	+ '>Освободить</button></td></tr>');
     }
       
     if (response.refresh) {
       CLOUDRONE.drones = response.drones;
-   }    
+    }
+  },
+  
+  stopTask : function(id) {
+    WORKER_COMM.doSetState({
+      state: {
+	id : id,
+	state : CLOUDRONE.drones[id].state
+      },
+      nstate : CLOUDRONE.STATES['Free'],
+    },
+    CLOUDRONE.templates.task_stop);
   },
 
   selectDrone : function(id) {
@@ -220,7 +241,7 @@ var CLOUDRONE = {
 	    id : id,
 	    state : CLOUDRONE.drones[id].state
 	  },
-	  nstate : CLOUDRONE.STATES['Selected']
+	  nstate : CLOUDRONE.STATES['Selected'],
 	},
 	CLOUDRONE.templates.drone_pick);
 	break;

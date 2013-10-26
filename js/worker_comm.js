@@ -51,7 +51,15 @@ var WORKER_COMM = {
 	break;
 	
       case 'drone_user_free_success' :
-	CLOUDRONE.doShowDrones({
+	WORKER_COMM.doShowDrones({
+	  policy : CLOUDRONE.SHOWPOLICY.SHOW_ALL,
+	},
+	CLOUDRONE.templates.drone_show);
+	break;
+	
+      case 'task_stop_success' :
+	CLOUDRONE.setState(response.state.id, response.state.state); 
+	WORKER_COMM.doShowDrones({
 	  policy : CLOUDRONE.SHOWPOLICY.SHOW_ALL,
 	},
 	CLOUDRONE.templates.drone_show);
@@ -142,7 +150,12 @@ var WORKER_COMM = {
 	name : '/cloudrone/set_state',
 	messageType : 'cloudrone/SetState'
       },
-      requestObject : input,
+      requestObject : {
+	state : input.state,
+	nstate : input.nstate,
+	driver : input.driver || '',
+	user : input.user || localStorage.id
+      },
       responseSuccess : template.success,
       responseFailure : template.failure
     });
@@ -182,17 +195,15 @@ var WORKER_COMM = {
     
     cmds = CLOUDRONE.drones[pickedDrone].cmds;
     
-    for (var i = 0; i < (cmds ? cmds.length : 0); i++) {
+    for (var i = 0; i < ((cmds) ? cmds.length : 0); i++) {
       initFlightCommand(cmds[i]);
     }
   },
-    
+  
   initMonitoring : function(pickedDrone) {
     
     var model = CLOUDRONE.drones[pickedDrone].model['topics'];
-
     var namespace = '/drone' + pickedDrone;
-    
     var navdata = model.navdata;
  
     this.navdataListener = new ROSLIB.Topic({
@@ -206,8 +217,8 @@ var WORKER_COMM = {
       pickedDrone = CLOUDRONE.pickedDrone;
       
       if (CLOUDRONE.drones[pickedDrone].state === CLOUDRONE.STATES['WaitNavdata']) {
-	console.log('all green');
-	CLOUDRONE.setState(pickedDrone, 'OnTask'); // Begin task
+        console.log('all green');
+        CLOUDRONE.setState(pickedDrone, 'OnTask'); // Begin task
       }
       
       var data = navdata.data;
@@ -215,9 +226,9 @@ var WORKER_COMM = {
       var isValueObject;
       
       for(var key in data) {
-	isValueObject = data[key] instanceof Object;
-	value = (isValueObject) ? data[key].states[message[key]] : message[key];
-	CLOUDRONE.printNavdataInfo(((isValueObject) ? data[key].name : data[key]), value);
+        isValueObject = data[key] instanceof Object;
+        value = (isValueObject) ? data[key].states[message[key]] : message[key];
+        CLOUDRONE.printNavdataInfo(((isValueObject) ? data[key].name : data[key]), value);
       }
     });
     
@@ -228,7 +239,7 @@ var WORKER_COMM = {
     this.viewer = new MJPEGCANVAS.Viewer({
         divID: 'droneCamera',
         host: this.mjpeghostname,
-	port: this.mjpegport,
+        port: this.mjpegport,
         width: video.width,
         height: video.height,
         topic: namespace + video.topic

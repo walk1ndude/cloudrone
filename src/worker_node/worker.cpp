@@ -12,6 +12,7 @@
 #include <QtCore/QDir>
 
 #include "worker_node/worker.h"
+#include <../../ardrone_autonomy/ARDroneLib/FFMPEG/ffmpeg/libavcodec/sipr16kdata.h>
 #include <cloudrone/User.h>
 
 Worker::Worker(QObject * parent) :
@@ -211,8 +212,18 @@ bool Worker::setState(cloudrone::SetState::Request & req, cloudrone::SetState::R
     return true;
   }
   
-  if (stateSet->setState(req, res)) {
-    QSqlQuery query;
+  QSqlQuery query;
+  
+  query.prepare("SELECT task FROM state_set WHERE cstate=:cstate AND nstate=:nstate;");
+  query.bindValue(":cstate", req.state.state);
+  query.bindValue(":nstate", req.nstate);
+  
+  query.exec();
+  query.next();
+  
+  QString task = query.value(0).toString();
+  
+  if (stateSet->setState(req, task, res)) {
     
     query.prepare("UPDATE drones SET state=:nstate WHERE id=:id;");
     query.bindValue(":id", req.state.id);
@@ -242,7 +253,8 @@ bool Worker::ownDrone(cloudrone::SetState::Request & req, cloudrone::SetState::R
   }
   
   QSqlQuery query;
-  query.prepare("INSERT INTO drone_ownership VALUES(:user,:drone);");
+  
+  query.prepare("INSERT INTO drone_ownership(user,drone) VALUES(:user,:drone);");
   query.bindValue(":user", QString::fromStdString(req.user));
   query.bindValue(":drone", req.state.id);
   
