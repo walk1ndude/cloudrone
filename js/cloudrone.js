@@ -325,7 +325,7 @@ var CLOUDRONE = {
   fetchMaps : function(id) { 
     
      //CLOUDRONE.map.remove();
-     L.tileLayer('../tiles_/'+'qwe'+id+'/{z}/{x}/{y}.png', {maxZoom: 2,}).addTo(CLOUDRONE.map);
+     L.tileLayer('../tiles_/'+'qwe'+id+'/{z}/{x}/{y}.png', {maxZoom: 2, noWrap: true}).addTo(CLOUDRONE.map);
      CLOUDRONE.map.markers = [];
     
   },
