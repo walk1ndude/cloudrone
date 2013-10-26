@@ -234,6 +234,8 @@ var CLOUDRONE = {
     this.pickedDrone = id;
     var state = CLOUDRONE.drones[id].state;
     
+    CLOUDRONE.fetchMaps(id);
+    
     switch(state) {
       case CLOUDRONE.STATES['Free'] :
 	WORKER_COMM.doSetState({
