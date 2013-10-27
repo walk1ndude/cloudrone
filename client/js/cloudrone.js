@@ -5,11 +5,10 @@ var CLOUDRONE = {
   selectedDrone : -1,
   pickedDrone : -1,
   
-  counter : 0,
-  
   selectedMarker : 0,
   markerPopup : null,
   
+  counter : 0,
   interval : null,
   
   markers : {},
@@ -259,6 +258,7 @@ var CLOUDRONE = {
 	PAGE.showPage('Monitoring');
 	break;
     }
+    CLOUDRONE.map.invalidateSize(false);
   },
   
   getState : function(id) {
@@ -326,13 +326,18 @@ var CLOUDRONE = {
   
   fetchMaps : function(id) { 
     
-     //CLOUDRONE.map.remove();
-     L.tileLayer('../tiles_/'+'qwe'+id+'/{z}/{y}/{x}.png', {maxZoom: 2, noWrap: true}).addTo(CLOUDRONE.map);
+     CLOUDRONE.map.remove();
+     //CLOUDRONE.map.layers=[];
+     
+     CLOUDRONE.map = L.map('taskMap').setView([0, 0], 0);
+     L.tileLayer('../tiles_/'+'qwe'+id+'/{z}/{x}/{y}.png', {maxZoom: 2,noWrap:true}).addTo(CLOUDRONE.map);
      CLOUDRONE.map.markers = [];
     
   },
 
+  
   onClickStart : function() {
+    counter=0;
     var pickedDrone = CLOUDRONE.pickedDrone;
     var drone = CLOUDRONE.drones[pickedDrone];
     var state = CLOUDRONE.getState(pickedDrone);
@@ -411,6 +416,7 @@ var CLOUDRONE = {
     };
   },
   
+  
   timerClick : function() {
     var pickedDrone = CLOUDRONE.pickedDrone;
     var drone = CLOUDRONE.drones[pickedDrone];
@@ -426,6 +432,8 @@ var CLOUDRONE = {
     function addLeadZero(number) {
       return ((number < 10) ? '0' : '') + number;
     }
+    
+    counter++;
     
     $('#elapsedTime').html( addLeadZero(hours) + ':'
 			  + addLeadZero(minutes) + ':'

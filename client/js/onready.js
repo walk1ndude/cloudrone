@@ -5,10 +5,10 @@ $(document).ready(function() {
   PAGE.setPages();
     
   WORKER_COMM.initRos({
-    roshostname : 'localhost',
-    rosport : 8080,
-    mjpeghostname : 'localhost',
-    mjpegport : 8081
+    roshostname : '46.47.1.24',
+    rosport : 12000,
+    mjpeghostname : '46.47.1.24',
+    mjpegport : 12001
   });
   
   WORKER_COMM.doSign({
