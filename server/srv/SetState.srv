@@ -1,0 +1,7 @@
+cloudrone/State state
+int32 nstate
+string driver
+string user
+---
+cloudrone/State state
+uint32 error
