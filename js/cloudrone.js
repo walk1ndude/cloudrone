@@ -5,6 +5,8 @@ var CLOUDRONE = {
   selectedDrone : -1,
   pickedDrone : -1,
   
+  counter : 0,
+  
   selectedMarker : 0,
   markerPopup : null,
   
@@ -325,7 +327,7 @@ var CLOUDRONE = {
   fetchMaps : function(id) { 
     
      //CLOUDRONE.map.remove();
-     L.tileLayer('../tiles_/'+'qwe'+id+'/{z}/{x}/{y}.png', {maxZoom: 2, noWrap: true}).addTo(CLOUDRONE.map);
+     L.tileLayer('../tiles_/'+'qwe'+id+'/{z}/{y}/{x}.png', {maxZoom: 2, noWrap: true}).addTo(CLOUDRONE.map);
      CLOUDRONE.map.markers = [];
     
   },
