@@ -1,9 +1,0 @@
-<launch>
-  <group ns="cloudrone">
-    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
-	<arg name="port" value="8080"/>
-    </include>
-    <node pkg="cloudrone" type="worker_node" name="worker_node" output="screen"  />
-    <node pkg="mjpeg_server" type="mjpeg_server" name="mjpeg_server" args="_port:=8081"/>
-  </group>
-</launch>

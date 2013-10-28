@@ -1,7 +1,0 @@
-# 0 - all drones, 1 - user, 2 - free
-uint8 policy
-string user
----
-cloudrone/Drone[] drones
-bool refresh
-uint32 error
