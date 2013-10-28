@@ -1,0 +1,5 @@
+cloudrone/State state
+string user
+---
+cloudrone/State state
+uint32 error
