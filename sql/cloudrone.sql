@@ -186,6 +186,58 @@ SET character_set_client = utf8;
 SET character_set_client = @saved_cs_client;
 
 --
+-- Dumping routines for database 'cloudronedb'
+--
+/*!50003 DROP FUNCTION IF EXISTS `signUser` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8 */ ;
+/*!50003 SET character_set_results = utf8 */ ;
+/*!50003 SET collation_connection  = utf8_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`cloudrone`@`localhost` FUNCTION `signUser`(in_id varchar(50), in_password varchar(200), isPageUpdate bool) RETURNS int(11)
+    MODIFIES SQL DATA
+    DETERMINISTIC
+begin
+	if exists(select id from users where id=in_id)
+	then begin
+		if exists(select id from users where id=in_id and signed=true)
+		then begin
+			if (isPageUpdate)
+			then begin
+				return 1;
+			end;
+			else begin
+				update users set signed=false where id=in_id;
+				return 2;
+			end;
+			end if;
+		end;
+		else begin
+			if exists(select id from users where id=in_id and password=md5(in_password))
+			then begin
+				update users set signed=true where id=in_id;
+				return 1;
+			end;
+			end if;
+		end;
+		end if;
+	end; 
+	else begin
+		return 0;
+	end;
+	end if;
+end ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
 -- Final view structure for view `show_all`
 --
 
@@ -232,4 +284,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-10-29 17:48:37
+-- Dump completed on 2013-10-29 17:51:09
