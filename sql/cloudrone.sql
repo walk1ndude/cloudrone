@@ -39,7 +39,6 @@ CREATE TABLE `drone_ownership` (
 
 LOCK TABLES `drone_ownership` WRITE;
 /*!40000 ALTER TABLE `drone_ownership` DISABLE KEYS */;
-INSERT INTO `drone_ownership` VALUES ('test',0),('test',1),('test',3);
 /*!40000 ALTER TABLE `drone_ownership` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -70,7 +69,7 @@ CREATE TABLE `drones` (
 
 LOCK TABLES `drones` WRITE;
 /*!40000 ALTER TABLE `drones` DISABLE KEYS */;
-INSERT INTO `drones` VALUES (0,'TestDroneDist','ardrone2','RSATU',0,'/home/walkindude/catkin_ws/record/flight_2013-10-19-14-40-12.bag',''),(1,'TestDroneObj','ardrone2','ISA',3,'/home/walkindude/catkin_ws/record/flight1_2013-10-19-14-40-12.bag',''),(2,'TestDroneObjMinDist','ardrone2','RSATU',0,'/home/ardrone/f3/TestDroneMinDist.bag',''),(3,'TestDroneObjMaxDist','ardrone2','RSATU',0,'/home/ardrone/f3/TestDroneMaxDist.bag',''),(4,'TestDroneDist2','ardrone2','RSATU',0,'/home/ardrone/f3/TestDroneDist2.bag','');
+INSERT INTO `drones` VALUES (0,'TestDroneDist','ardrone2','RSATU',0,'/home/walkindude/catkin_ws/record/flight_2013-10-19-14-40-12.bag',''),(1,'TestDroneObj','ardrone2','ISA',0,'/home/walkindude/catkin_ws/record/flight1_2013-10-19-14-40-12.bag',''),(2,'TestDroneObjMinDist','ardrone2','RSATU',0,'/home/ardrone/f3/TestDroneMinDist.bag',''),(3,'TestDroneObjMaxDist','ardrone2','RSATU',0,'/home/ardrone/f3/TestDroneMaxDist.bag',''),(4,'TestDroneDist2','ardrone2','RSATU',0,'/home/ardrone/f3/TestDroneDist2.bag','');
 /*!40000 ALTER TABLE `drones` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -233,4 +232,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-10-27 11:39:17
+-- Dump completed on 2013-10-29 13:45:31

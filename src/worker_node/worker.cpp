@@ -12,7 +12,6 @@
 #include <QtCore/QDir>
 
 #include "worker_node/worker.h"
-#include <../../ardrone_autonomy/ARDroneLib/FFMPEG/ffmpeg/libavcodec/sipr16kdata.h>
 #include <cloudrone/User.h>
 
 Worker::Worker(QObject * parent) :
@@ -129,23 +128,30 @@ bool Worker::signUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response 
   }
   
   QSqlQuery query;
-  query.prepare("SELECT * FROM users WHERE id=:id AND (password=md5(:password) OR signed=true);");
+  query.prepare("SELECT signUser(:id, :password, :isPageUpdate);");
   query.bindValue(":id", QString::fromStdString(req.user.id));
   query.bindValue(":password", QString::fromStdString(req.user.password));
+  query.bindValue(":isPageUpdate", req.isPageUpdate);
   
-  if (!query.exec() || !query.size()) {
-    return respond(res, ERROR_NO_SUCH_USER);
+  query.exec();
+  query.next();
+  
+  // for now 0 - no such user, 1 - signed, 2 - signed off
+  int returnCode = query.value(0).toInt();
+  
+  switch (returnCode) {
+    
+    case 0 :
+      return respond(res, ERROR_CANT_SIGN_USER);
+    
+    case 1 :
+      res.id = req.user.id;
+      return respond(res, EVERYTHINGS_FINE);
+      
+    case 2 :
+      return respond(res, EVERYTHINGS_FINE);
+      
   }
-  
-  query.prepare("UPDATE users SET signed=true WHERE id=:id;");
-  query.bindValue(":id", QString::fromStdString(req.user.id));
-  
-  if (!query.exec()) {
-    return respond(res, ERROR_CANT_SIGN_USER);
-  }
-  
-  res.id = req.user.id;
-  return respond(res, EVERYTHINGS_FINE);
 }
 
 bool Worker::getMarkers(cloudrone::GetMarkers::Request & req, cloudrone::GetMarkers::Response & res) {

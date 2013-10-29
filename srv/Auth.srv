@@ -1,4 +1,5 @@
 cloudrone/User user
+bool isPageUpdate
 ---
 string id
 uint32 error
