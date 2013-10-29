@@ -69,7 +69,7 @@ CREATE TABLE `drones` (
 
 LOCK TABLES `drones` WRITE;
 /*!40000 ALTER TABLE `drones` DISABLE KEYS */;
-INSERT INTO `drones` VALUES (0,'TestDroneDist','ardrone2','RSATU',0,'/media/f3/TestDroneDist.bag',''),(1,'TestDroneObj','ardrone2','ISA',0,'/media/f3/TestDroneObj.bag',''),(2,'TestDroneObjMinDist','ardrone2','RSATU',0,'/media/f3/TestDroneMinDist.bag',''),(3,'TestDroneObjMaxDist','ardrone2','RSATU',0,'/media/f3/TestDroneMaxDist.bag',''),(4,'TestDroneDist2','ardrone2','RSATU',0,'/media/f3/TestDroneDist.bag','');
+INSERT INTO `drones` VALUES (0,'TestDroneDist','ardrone2','RSATU',0,'/media/f3/TestDroneDist.bag',''),(1,'TestDroneObj','ardrone2','ISA',0,'/media/f3/TestDroneObj.bag',''),(2,'TestDroneMinDist','ardrone2','RSATU',0,'/media/f3/TestDroneMinDist.bag',''),(3,'TestDroneMaxDist','ardrone2','RSATU',0,'/media/f3/TestDroneMaxDist.bag',''),(4,'TestDroneDist2','ardrone2','RSATU',0,'/media/f3/TestDroneDist.bag','');
 /*!40000 ALTER TABLE `drones` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -166,7 +166,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES ('test','7e07495675d45c4e94969485ccc8e57a',1),('test1','5a105e8b9d40e1329780d62ea2265d8a',0),('test2','ad0234829205b9033196ba818f7a872b',0);
+INSERT INTO `users` VALUES ('test','7e07495675d45c4e94969485ccc8e57a',0),('test1','5a105e8b9d40e1329780d62ea2265d8a',0),('test2','ad0234829205b9033196ba818f7a872b',0);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -284,4 +284,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-10-29 17:51:09
+-- Dump completed on 2013-10-29 18:26:43
