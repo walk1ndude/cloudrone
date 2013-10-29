@@ -39,6 +39,7 @@ CREATE TABLE `drone_ownership` (
 
 LOCK TABLES `drone_ownership` WRITE;
 /*!40000 ALTER TABLE `drone_ownership` DISABLE KEYS */;
+INSERT INTO `drone_ownership` VALUES ('test',3);
 /*!40000 ALTER TABLE `drone_ownership` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -69,7 +70,7 @@ CREATE TABLE `drones` (
 
 LOCK TABLES `drones` WRITE;
 /*!40000 ALTER TABLE `drones` DISABLE KEYS */;
-INSERT INTO `drones` VALUES (0,'TestDroneDist','ardrone2','RSATU',0,'/media/f3/TestDroneDist.bag',''),(1,'TestDroneObj','ardrone2','ISA',0,'/media/f3/TestDroneObj.bag',''),(2,'TestDroneObjMinDist','ardrone2','RSATU',0,'/media/f3/TestDroneObjMinDist.bag',''),(3,'TestDroneObjMaxDist','ardrone2','RSATU',0,'/media/f3/TestDroneObjMaxDist.bag',''),(4,'TestDroneDist2','ardrone2','RSATU',0,'/media/f3/TestDroneDist2.bag','');
+INSERT INTO `drones` VALUES (0,'TestDroneDist','ardrone2','RSATU',0,'/media/f3/TestDroneDist.bag',''),(1,'TestDroneObj','ardrone2','ISA',0,'/media/f3/TestDroneObj.bag',''),(2,'TestDroneObjMinDist','ardrone2','RSATU',0,'/media/f3/TestDroneMinDist.bag',''),(3,'TestDroneObjMaxDist','ardrone2','RSATU',3,'/media/f3/TestDroneMaxDist.bag',''),(4,'TestDroneDist2','ardrone2','RSATU',0,'/media/f3/TestDroneDist2.bag','');
 /*!40000 ALTER TABLE `drones` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -232,4 +233,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-10-29 16:49:02
+-- Dump completed on 2013-10-29 17:08:39
