@@ -31,6 +31,8 @@
 #define ERROR_CANT_LAUNCH_NODES 9
 #define ERROR_CANT_START_TASK 10
 #define ERROR_CANT_END_TASK 11
+#define ERROR_USER_ALREADY_SIGNED_ON 254
+#define ERROR_USER_ALREADY_SIGNED_OFF 255
 
 //==============================================================//
 

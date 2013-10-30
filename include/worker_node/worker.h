@@ -97,7 +97,9 @@ private:
   bool fetchDatabase();
   
   void closeDatabase();
-   
+  
+  bool isIDSigned(std::string id);
+  
   bool registerUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response & res);
   bool signUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response & res);
   

@@ -96,29 +96,51 @@ template <class ResponseT> bool Worker::checkDB(ResponseT & res) {
   }
 }
 
+bool Worker::isIDSigned(std::string id) {
+  
+  QSqlQuery query;
+  
+  query.prepare("SELECT signed FROM users WHERE id=:id");
+  query.bindValue(":id", QString::fromStdString(id));
+  query.exec();
+  query.next();
+  
+  if (query.size() == 0) {
+    return false;
+  }
+  else {
+    return query.value(0).toBool();
+  }
+}
+
+
 bool Worker::registerUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response & res) {
   
   if (checkDB(res)) {
     return true;
   }
   
-  QSqlQuery query;
-  query.prepare("SELECT * FROM users WHERE id=:id;");
-  query.bindValue(":id", QString::fromStdString(req.user.id));
-  
-  if (!query.exec() || query.size()) {
-    return respond(res, ERROR_USER_ALREADY_REGISTERED);
-  }
-  
-  query.prepare("INSERT INTO users(id, password) VALUES(:id, md5(:password));");
-  query.bindValue(":id", QString::fromStdString(req.user.id));
-  query.bindValue(":password", QString::fromStdString(req.user.password));
-  
-  if (!query.exec()) {
-    return respond(res, ERROR_CANT_REGISTER_USER); 
-  }
+  if (!isIDSigned(req.user.id)) {
+    QSqlQuery query;
+    query.prepare("SELECT * FROM users WHERE id=:id;");
+    query.bindValue(":id", QString::fromStdString(req.user.id));
 
-  return respond(res, EVERYTHINGS_FINE);
+    if (!query.exec() || query.size()) {
+      return respond(res, ERROR_USER_ALREADY_REGISTERED);
+    }
+
+    query.prepare("INSERT INTO users(id, password) VALUES(:id, md5(:password));");
+    query.bindValue(":id", QString::fromStdString(req.user.id));
+    query.bindValue(":password", QString::fromStdString(req.user.password));
+
+    if (!query.exec()) {
+      return respond(res, ERROR_CANT_REGISTER_USER); 
+    }
+    return respond(res, EVERYTHINGS_FINE);
+  }
+  else {
+    return respond(res, ERROR_USER_ALREADY_SIGNED_ON);
+  }
 }
 
 bool Worker::signUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response & res) {
@@ -169,47 +191,53 @@ bool Worker::getDrones(cloudrone::GetDrones::Request & req, cloudrone::GetDrones
     return true;
   }
   
-  QSqlQuery query;
+  if (isIDSigned(req.user)) {
   
-  switch (req.policy) {
+    QSqlQuery query;
     
-    case SHOW_ALL :
-      query.prepare("SELECT * FROM show_all ORDER BY (id);");
-      break;
+    switch (req.policy) {
       
-    case SHOW_FREE :
-      query.prepare("SELECT * FROM show_all WHERE state=" + QString::number(STATE_FREE) + " ORDER BY (id);");
-      break;
-     
-    case SHOW_USER :
-      query.prepare("SELECT * FROM show_all WHERE user=:user ORDER BY (id);");
-      query.bindValue(":user", QString::fromStdString(req.user));
-      break;
-  }
-  
-  if (!query.exec()) {
-    return respond(res, ERROR_CANT_SHOW_DRONES);
-  }
-  
-  cloudrone::Drone drone;
- 
-  while (query.next()) {
+      case SHOW_ALL :
+	query.prepare("SELECT * FROM show_all ORDER BY (id);");
+	break;
+	
+      case SHOW_FREE :
+	query.prepare("SELECT * FROM show_all WHERE state=" + QString::number(STATE_FREE) + " ORDER BY (id);");
+	break;
+      
+      case SHOW_USER :
+	query.prepare("SELECT * FROM show_all WHERE user=:user ORDER BY (id);");
+	query.bindValue(":user", QString::fromStdString(req.user));
+	break;
+    }
     
-    drone.id = query.value(0).toInt();
-    drone.name = query.value(1).toString().toStdString();
-    drone.model = query.value(2).toString().toStdString();
-    drone.location = query.value(3).toString().toStdString();
-    drone.driver = query.value(4).toString().toStdString();
-    drone.map = query.value(5).toString().toStdString();
-    drone.state = query.value(6).toInt();
-    drone.user = query.value(7).toString().toStdString();
+    if (!query.exec()) {
+      return respond(res, ERROR_CANT_SHOW_DRONES);
+    }
     
-    res.drones.push_back(drone);
+    cloudrone::Drone drone;
+  
+    while (query.next()) {
+      
+      drone.id = query.value(0).toInt();
+      drone.name = query.value(1).toString().toStdString();
+      drone.model = query.value(2).toString().toStdString();
+      drone.location = query.value(3).toString().toStdString();
+      drone.driver = query.value(4).toString().toStdString();
+      drone.map = query.value(5).toString().toStdString();
+      drone.state = query.value(6).toInt();
+      drone.user = query.value(7).toString().toStdString();
+      
+      res.drones.push_back(drone);
+    }
+    
+    res.refresh = (req.policy == SHOW_ALL) ? true : false;
+    
+    return respond(res, EVERYTHINGS_FINE);
   }
-  
-  res.refresh = (req.policy == SHOW_ALL) ? true : false;
-  
-  return respond(res, EVERYTHINGS_FINE);
+  else {
+    return respond(res, ERROR_USER_ALREADY_SIGNED_OFF);
+  }
 }
 
 bool Worker::setState(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res) {
@@ -217,6 +245,8 @@ bool Worker::setState(cloudrone::SetState::Request & req, cloudrone::SetState::R
   if (checkDB(res)) {
     return true;
   }
+  
+  if (isIDSigned(req.user)) {
   
   QSqlQuery query;
   
@@ -257,6 +287,10 @@ bool Worker::setState(cloudrone::SetState::Request & req, cloudrone::SetState::R
   }
   
   return respond(res, EVERYTHINGS_FINE);
+  }
+  else {
+    return respond(res, ERROR_USER_ALREADY_SIGNED_OFF);
+  }
 }
 
 bool Worker::ownDrone(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res) {
@@ -265,15 +299,21 @@ bool Worker::ownDrone(cloudrone::SetState::Request & req, cloudrone::SetState::R
     return true;
   }
   
-  QSqlQuery query;
-  
-  query.prepare("INSERT INTO drone_ownership(user,drone) VALUES(:user,:drone);");
-  query.bindValue(":user", QString::fromStdString(req.user));
-  query.bindValue(":drone", req.state.id);
-  
-  query.exec();
-  
-  return respond(res, EVERYTHINGS_FINE);
+  if (isIDSigned(req.user)) {
+    
+    QSqlQuery query;
+    
+    query.prepare("INSERT INTO drone_ownership(user,drone) VALUES(:user,:drone);");
+    query.bindValue(":user", QString::fromStdString(req.user));
+    query.bindValue(":drone", req.state.id);
+    
+    query.exec();
+    
+    return respond(res, EVERYTHINGS_FINE);
+  }
+  else {
+    return respond(res, ERROR_USER_ALREADY_SIGNED_OFF);
+  }
 }
 
 bool Worker::disownDrone(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res) {
@@ -282,14 +322,20 @@ bool Worker::disownDrone(cloudrone::SetState::Request & req, cloudrone::SetState
     return true;
   }
   
-  QSqlQuery query;
-  query.prepare("DELETE FROM drone_ownership WHERE user=:user AND drone=:drone");
-  query.bindValue(":user", QString::fromStdString(req.user));
-  query.bindValue(":drone", req.state.id);
- 
-  query.exec();
+  if (isIDSigned(req.user)) {
+    
+    QSqlQuery query;
+    query.prepare("DELETE FROM drone_ownership WHERE user=:user AND drone=:drone");
+    query.bindValue(":user", QString::fromStdString(req.user));
+    query.bindValue(":drone", req.state.id);
   
-  return respond(res, EVERYTHINGS_FINE);
+    query.exec();
+    
+    return respond(res, EVERYTHINGS_FINE);
+  }
+  else {
+    return respond(res, ERROR_USER_ALREADY_SIGNED_OFF);
+  }
 }
 
 void Worker::notifyStateChanged(const int & id, const int & nstate) {
