@@ -171,7 +171,7 @@ bool Worker::signUser(cloudrone::Auth::Request & req, cloudrone::Auth::Response 
       return respond(res, EVERYTHINGS_FINE);
       
     case 2 :
-      return respond(res, EVERYTHINGS_FINE);
+      return respond(res, ERROR_USER_ALREADY_SIGNED_OFF);
       
   }
 }
