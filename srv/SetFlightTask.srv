@@ -1,0 +1,5 @@
+uint32 drone
+cloudrone/FlightTask flightTask
+---
+cloudrone/State state
+uint32 error
