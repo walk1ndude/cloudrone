@@ -1,7 +1,8 @@
 cloudrone/State state
-int32 nstate
+uint32 nstate
 string driver
 string user
 ---
 cloudrone/State state
+cloudrone/FlightTask flightTask
 uint32 error

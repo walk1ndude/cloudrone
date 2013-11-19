@@ -117,7 +117,7 @@ CREATE TABLE `state_set` (
 
 LOCK TABLES `state_set` WRITE;
 /*!40000 ALTER TABLE `state_set` DISABLE KEYS */;
-INSERT INTO `state_set` VALUES (0,1,NULL),(1,0,NULL),(1,2,'start'),(2,0,NULL),(2,3,'finish'),(3,0,NULL),(3,1,NULL),(3,2,'start');
+INSERT INTO `state_set` VALUES (0,1,NULL),(1,0,NULL),(1,1,NULL),(1,2,NULL),(2,0,NULL),(2,2,NULL),(2,3,'start'),(3,0,NULL),(3,1,NULL),(3,4,'finish'),(3,5,'pause'),(4,1,NULL),(4,3,'start'),(5,3,'resume');
 /*!40000 ALTER TABLE `state_set` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -141,8 +141,33 @@ CREATE TABLE `states` (
 
 LOCK TABLES `states` WRITE;
 /*!40000 ALTER TABLE `states` DISABLE KEYS */;
-INSERT INTO `states` VALUES (0,'Free'),(1,'Selected'),(2,'OnTask'),(3,'TaskCompleted');
+INSERT INTO `states` VALUES (0,'Free'),(1,'Selected'),(2,'TaskGiven'),(3,'OnTask'),(4,'TaskCompleted'),(5,'TaskPaused');
 /*!40000 ALTER TABLE `states` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `task_queue`
+--
+
+DROP TABLE IF EXISTS `task_queue`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `task_queue` (
+  `drone` int(11) NOT NULL,
+  `number` int(11) NOT NULL AUTO_INCREMENT,
+  `command` varchar(100) NOT NULL,
+  PRIMARY KEY (`drone`,`number`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `task_queue`
+--
+
+LOCK TABLES `task_queue` WRITE;
+/*!40000 ALTER TABLE `task_queue` DISABLE KEYS */;
+INSERT INTO `task_queue` VALUES (1,3,'setInitialReachDist 0.2'),(1,2,'setMaxControl 10.2'),(1,1,'autoInit 300 200 1000 0.5'),(2,7,'land'),(2,6,'goto 0 0 1 0'),(2,5,'setStayTime 4'),(2,4,'setStayWithinDist 0.5'),(2,3,'setInitialReachDist 0.2'),(2,2,'setMaxControl 10.2'),(2,1,'autoInit 300 200 1000 0.5'),(0,7,'land'),(0,6,'goto 0 0 1 0'),(0,5,'setStayTime 4'),(0,4,'setStayWithinDist 0.5'),(0,3,'setInitialReachDist 0.2'),(0,2,'setMaxControl 10.2'),(0,1,'autoInit 300 200 1000 0.5'),(1,4,'setStayWithinDist 0.5'),(1,5,'setStayTime 4'),(1,6,'goto 0 0 1 0'),(1,7,'land'),(3,1,'autoInit 300 200 1000 0.5'),(3,2,'setMaxControl 10.2'),(3,3,'setInitialReachDist 0.2'),(3,4,'setStayWithinDist 0.5'),(3,5,'setStayTime 4'),(3,6,'goto 0 0 1 0'),(3,7,'land');
+/*!40000 ALTER TABLE `task_queue` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -298,4 +323,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-10-30 16:15:37
+-- Dump completed on 2013-11-19 18:39:03

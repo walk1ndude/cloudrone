@@ -25,7 +25,9 @@ private:
   
 private slots:
   void removeDrone(Drone * drone);
+  void publishTum(const int & id);
   
 signals:
   void signalTaskCompleted(const int & id);
+  void signalPublishTum(const int & id);
 };

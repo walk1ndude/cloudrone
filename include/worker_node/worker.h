@@ -8,8 +8,10 @@
 
 #include <cloudrone/GetDrones.h>
 #include <cloudrone/GetMarkers.h>
+#include <cloudrone/GetFlightTask.h>
 
 #include <cloudrone/SetState.h>
+#include <cloudrone/SetFlightTask.h>
 
 #include <cloudrone/KillNodes.h>
 
@@ -20,16 +22,15 @@
 #define TOPIC_REG "reg"
 #define TOPIC_SIGN "sign"
 
-#define TOPIC_GET_INFO "get_info"
 #define TOPIC_GET_DRONES "get_drones"
 #define TOPIC_GET_MARKERS "get_markers"
+#define TOPIC_GET_STATE "get_state"
 
 #define TOPIC_SET_STATE "set_state"
+#define TOPIC_SET_FLIGHT_TASK "set_flight_task"
 
 #define TOPIC_LAUNCH_NODES "launch_nodes"
 #define TOPIC_KILL_NODES "kill_nodes"
-
-#define TOPIC_GET_STATE "get_state"
 
 //=======================VIEW POLICY============================//
 
@@ -79,9 +80,13 @@ private:
    
   ros::ServiceServer registerService;
   ros::ServiceServer signService;
+  
   ros::ServiceServer getMarkerService;
   ros::ServiceServer getDronesService;
+  
   ros::ServiceServer setStateService;
+  ros::ServiceServer setFlightTaskService;
+  
   ros::ServiceServer killNodesService;
   
   ros::Publisher stateChangePublisher;
@@ -106,9 +111,12 @@ private:
   bool getMarkers(cloudrone::GetMarkers::Request & req, cloudrone::GetMarkers::Response & res);
   bool getDrones(cloudrone::GetDrones::Request & req, cloudrone::GetDrones::Response & res);
   
-  bool setState(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res);
+  bool getFlightTask(const int & id, cloudrone::SetState::Response & res);
   
-  void notifyStateChanged(const int & id, const int & nstate);
+  bool setState(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res);
+  bool setFlightTask(cloudrone::SetFlightTask::Request & req, cloudrone::SetFlightTask::Response & res);
+  
+  void notifyStateChanged(const int & drone, const int & nstate);
   
   bool ownDrone(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res);
   bool disownDrone(cloudrone::SetState::Request & req, cloudrone::SetState::Response & res);
@@ -117,4 +125,5 @@ private slots:
   void notifyTaskCompleted(const int & id);
   void notifyTaskPaused(const int & id);
   void notifyTaskResumed(const int & id);
+  void publishTum(const int & id);
 };

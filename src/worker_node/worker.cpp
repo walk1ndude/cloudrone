@@ -1,4 +1,3 @@
-#include <iostream>
 #include <QtSql/QSqlQuery>
 
 #include <QtCore/QVariant>
@@ -7,9 +6,9 @@
 #include <QtCore/QIODevice>
 #include <QtCore/QTextStream>
 
-#include <QtCore/QThread>
+#include <QtCore/QRegExp>
 
-#include <QtCore/QDir>
+#include <std_msgs/String.h>
 
 #include "worker_node/worker.h"
 #include <cloudrone/User.h>
@@ -64,15 +63,18 @@ void Worker::fetchServices() {
 
   getDronesService = nh.advertiseService(TOPIC_GET_DRONES, &Worker::getDrones, this);
   getMarkerService = nh.advertiseService(TOPIC_GET_MARKERS, &Worker::getMarkers, this);
-
+  
   setStateService = nh.advertiseService(TOPIC_SET_STATE, &Worker::setState, this);
-
+  setFlightTaskService = nh.advertiseService(TOPIC_SET_FLIGHT_TASK, &Worker::setFlightTask, this);
+  
   //killNodesService = nh.advertiseService(TOPIC_KILL_NODES, &Worker::killNodes, this);
 }
 
 void Worker::fetchSignals() {
   QObject::connect(stateSet->getDroneLauncher(), &DroneLauncher::signalTaskCompleted,
 		   this, &Worker::notifyTaskCompleted, Qt::DirectConnection);
+  QObject::connect(stateSet->getDroneLauncher(), &DroneLauncher::signalPublishTum,
+		  this, &Worker::publishTum, Qt::DirectConnection);
 }
 
 void Worker::fetchStateSet() {
@@ -278,11 +280,13 @@ bool Worker::setState(cloudrone::SetState::Request & req, cloudrone::SetState::R
     int nstate = req.nstate;
     
     if (cstate == STATE_FREE && nstate == STATE_SELECTED) {
-      return ownDrone(req, res);
+      return getFlightTask(req.state.id, res) && ownDrone(req, res);
     }
-    
-    if (nstate == STATE_FREE) {
+    else if (nstate == STATE_FREE) {
       return disownDrone(req, res);
+    }
+    else if (cstate == STATE_SELECTED || nstate == STATE_SELECTED) {
+      return getFlightTask(req.state.id, res);
     }
   }
   
@@ -338,6 +342,50 @@ bool Worker::disownDrone(cloudrone::SetState::Request & req, cloudrone::SetState
   }
 }
 
+bool Worker::getFlightTask(const int & drone, cloudrone::SetState::Response & res) {
+  
+  QSqlQuery query;
+  
+  query.prepare("SELECT command FROM task_queue WHERE drone=:drone ORDER BY number;");
+  query.bindValue(":drone", drone);
+  query.exec();
+  
+  while(query.next()) {
+    res.flightTask.commands.push_back(query.value(0).toString().toStdString());
+  }
+  
+  return respond(res, EVERYTHINGS_FINE);
+}
+
+
+bool Worker::setFlightTask(cloudrone::SetFlightTask::Request & req, cloudrone::SetFlightTask::Response & res) {
+
+  QSqlQuery query;
+  
+  //remove previous task
+  query.prepare("DELETE FROM task_queue WHERE drone=:drone;");
+  query.bindValue(":drone", req.drone);
+  query.exec();
+  
+  //add new commands
+  query.prepare("INSERT INTO task_queue(drone, command) VALUES(:drone,:command);");
+  query.bindValue(":drone", req.drone);
+  
+  for (
+    std::vector<std::string>::iterator it = req.flightTask.commands.begin();
+    it != req.flightTask.commands.end();
+    it ++ ) {
+    
+    query.bindValue(":command", QString::fromStdString(*it));
+    query.exec();
+  }
+  
+  res.state.id = req.drone;
+  res.state.state = STATE_TASKGIVEN;
+  
+  return respond(res, EVERYTHINGS_FINE);
+}
+
 void Worker::notifyStateChanged(const int & id, const int & nstate) {
   cloudrone::State newstate;
   newstate.id = id;
@@ -365,3 +413,41 @@ void Worker::notifyTaskResumed(const int & id) {
   notifyStateChanged(id, STATE_ONTASK);
 }
 
+void Worker::publishTum(const int & id) {
+  
+  QSqlQuery query;
+  
+  query.prepare("SELECT driver FROM drones WHERE id=:id;");
+  query.bindValue(":id", id);
+  
+  query.exec();
+  query.next();
+   
+  if (query.value(0).toString().toStdString() == ARDRONE_DRIVER) {
+  
+    std::stringstream ss;
+    ss << "/drone" << id << "/tum_ardrone/com";
+    const char * topic_name = ss.str().c_str();
+  
+    ros::Publisher tumComPublisher = nh.advertise<std_msgs::String>(
+	QString(QString("/drone") + QString::number(id) + QString("/tum_ardrone/com")).toStdString().c_str(), 1);
+    
+    QSqlQuery queryToDel;
+    
+    query.prepare("SELECT command, number FROM task_queue WHERE drone=:drone ORDER BY number;");
+    query.bindValue(":drone", id);
+    query.exec();
+    
+    std_msgs::String msg;
+    
+    msg.data = "c start";
+    tumComPublisher.publish(msg);
+    
+    while(query.next()) {
+      
+      msg.data = QString("c " + query.value(0).toString()).toStdString();
+      
+      tumComPublisher.publish(msg);
+    }
+  }
+}

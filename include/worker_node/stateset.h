@@ -9,9 +9,10 @@
 
 #define STATE_FREE 0
 #define STATE_SELECTED 1
-#define STATE_ONTASK 2
-#define STATE_TASKCOMPLETED 3
-#define STATE_TASKPAUSED 4
+#define STATE_TASKGIVEN 2
+#define STATE_ONTASK 3
+#define STATE_TASKCOMPLETED 4
+#define STATE_TASKPAUSED 5
 
 //========================DRIVERS==================================//
 

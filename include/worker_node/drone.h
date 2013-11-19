@@ -12,21 +12,28 @@ public:
   ~Drone();
   
   int getID();
-  void setID(const int & id);
   int getPlayPID();
-  void setPlayPID(const int & id);
   QProcess * getProcess();
+  QVector<std::string> getFlightTask();
+  
+  void setID(const int & id);
+  void setPlayPID(const int & id);
   void setProgram(const QString & program);
+  void setFlightTask(const QVector<std::string> & flightTask);
   
 private:
   QProcess * process;
   QString program;
+  QVector<std::string>flightTask;
   int id;
+  int ccommand;
   int playPID; // pid of rosbag, need for play / resume
 
 signals:
   void signalTaskFinished(Drone * drone);
+  void signalPublishTum(const int & id);
   
 public slots:
   void startTask();
+  void publishTum();
 };

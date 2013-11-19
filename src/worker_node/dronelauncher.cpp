@@ -1,5 +1,6 @@
-#include "worker_node/dronelauncher.h"
 #include <signal.h>
+
+#include "worker_node/dronelauncher.h"
 
 DroneLauncher::DroneLauncher(QObject* parent): QObject(parent) {
 
@@ -16,6 +17,7 @@ bool DroneLauncher::startDrone(const int & id, const QString & program) {
   QObject::connect(droneThread, &QThread::started, drone, &Drone::startTask);
   QObject::connect(drone, (void (Drone::*)(Drone*))&Drone::signalTaskFinished,
 		   this, (void (DroneLauncher::*)(Drone*))&DroneLauncher::removeDrone, Qt::DirectConnection);
+  QObject::connect(drone, &Drone::signalPublishTum, this, &DroneLauncher::publishTum, Qt::DirectConnection);
   QObject::connect(drone, &Drone::destroyed, droneThread, &QThread::quit);
   QObject::connect(droneThread, &QThread::finished, droneThread, &QThread::deleteLater);
   
@@ -98,4 +100,8 @@ bool DroneLauncher::resumeDrone(const int & id) {
   else {
     return false;
   }
+}
+
+void DroneLauncher::publishTum(const int & id) {
+  emit signalPublishTum(id);
 }
